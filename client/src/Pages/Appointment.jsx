@@ -21,16 +21,18 @@ const Appointment = () => {
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
-        const { data } = await axios.get(
+        const response = await axios.get(
           "http://localhost:8000/api/v1/users/doctors",
-          {
-            withCredentials: true,
-          }
+          { withCredentials: true }
         );
-        console.log(data.doctors);
-        setDoctors(data.doctors);
+        console.log(response.data);
+        if (response.data.success) {
+          setDoctors(response.data.data);
+        } else {
+          console.log("Failed to fetch doctors: ", response.data.message);
+        }
       } catch (error) {
-        console.log(error.response.data.message);
+        // console.log(error.response.data.message);
       }
     };
     fetchDoctors();
