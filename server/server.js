@@ -4,6 +4,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { errorMiddleware } from "./middlewares/error.middlewares.js";
 import userRouter from "./routes/user.routes.js";
+import prescribeRouter from "./routes/prescription.routes.js";
 import cookieParser from "cookie-parser";
 import messageRouter from "./routes/msg.routes.js";
 import fileUpload from "express-fileupload";
@@ -59,6 +60,7 @@ app.get("/", (req, res) =>
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/message", messageRouter);
 app.use("/api/v1/appoinments", appointmentRouter);
+app.use("/api/v1/prescribe", prescribeRouter);
 
 //error-middleware
 app.use(errorMiddleware);

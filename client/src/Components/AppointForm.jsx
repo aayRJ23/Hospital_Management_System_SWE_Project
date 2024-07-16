@@ -221,7 +221,7 @@ const AppointForm = ({ data, onClose }) => {
                 type="submit"
                 className="w-32 h-12 bg-gradient-to-r from-green-500 to-blue-400 text-white rounded-lg font-semibold transform transition-transform duration-300 hover:scale-105 hover:bg-gradient-to-l"
               >
-                Confirm Appointment
+                Book Appointment
               </button>
             </div>
           </form>

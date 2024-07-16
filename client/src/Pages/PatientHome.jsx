@@ -6,8 +6,7 @@ import { toast } from "react-toastify";
 import { GoCheckCircleFill } from "react-icons/go";
 import { AiFillCloseCircle } from "react-icons/ai";
 import { Navbar } from "../Components/Navbar";
-import { TicketX } from "lucide-react";
-import { TicketCheck } from "lucide-react";
+import { TicketX, TicketCheck } from "lucide-react";
 
 const PatientHome = () => {
   const [appointments, setAppointments] = useState([]);
@@ -49,8 +48,11 @@ const PatientHome = () => {
       toast.error("Failed to cancel the appointment");
     }
   };
-  
-  
+
+  const handleGetPrescription = (appointmentId) => {
+    // Implement logic to navigate to the prescription page or fetch prescription details
+    console.log(`Getting prescription for appointment ID: ${appointmentId}`);
+  };
 
   return (
     <div className="w-full h-screen bg-gray-100">
@@ -88,24 +90,34 @@ const PatientHome = () => {
               appointments.map((appointment) =>
                 appointment.patientId === pat._id ? (
                   <tr key={appointment._id} className="border-b border-gray-200">
-                    <td className="py-2 text-center rounded-l-lg">
+                    <td className="py-2 text-center font-bold rounded-l-lg">
                       {appointment.firstName} {appointment.lastName}
                     </td>
-                    <td className="py-2 text-center">
+                    <td className="py-2 text-center font-bold">
                       {appointment.appointment_date.substring(0, 10)}
                     </td>
-                    <td className="py-2 text-center">{appointment.status}</td>
-                    <td className="py-2 text-center">
+                    <td className="py-2 text-center font-bold">{appointment.status}</td>
+                    <td className="py-2 text-center font-bold">
                       {appointment.doctor.firstName} {appointment.doctor.lastName}
                     </td>
-                    <td className="py-2 text-center">{appointment.department}</td>
-                    <td className="py-2 text-center rounded-r-lg">
-                      <button
-                        onClick={() => handleCancel(appointment._id)}
-                        className="bg-red-500 text-white px-4 py-2 rounded-full hover:bg-red-600 transition duration-300"
-                      >
-                        Cancel Appointment
-                      </button>
+                    <td className="py-2 text-center font-bold">{appointment.department}</td>
+                    <td className="py-2 text-center font-bold rounded-r-lg flex justify-around">
+                      {appointment.status === "Pending" && (
+                        <button
+                          onClick={() => handleCancel(appointment._id)}
+                          className="bg-red-500 text-white px-4 py-2 rounded-full hover:bg-red-600 transition duration-300"
+                        >
+                          Cancel Appointment
+                        </button>
+                      )}
+                      {appointment.status === "Accepted" && (
+                        <button
+                          onClick={() => handleGetPrescription(appointment._id)}
+                          className="bg-green-500 text-white px-4 py-2 rounded-full hover:bg-green-600 transition duration-300"
+                        >
+                          Get Prescription
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ) : null
