@@ -1,16 +1,14 @@
-import React, { useContext, useEffect, useState } from "react";
-import { Context } from "../main";
-import { Navigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { GoCheckCircleFill } from "react-icons/go";
-import { AiFillCloseCircle } from "react-icons/ai";
 import { Navbar } from "../Components/Navbar";
-import { TicketX } from "lucide-react";
-import { TicketCheck } from "lucide-react";
+import { TicketX, TicketCheck } from "lucide-react";
+import './AppStatus.css';
+import Prescribe from "./Prescribe.jsx";
 
 const DoctorHome = () => {
   const [appointments, setAppointments] = useState([]);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
 
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -26,22 +24,17 @@ const DoctorHome = () => {
     };
     fetchAppointments();
   }, []);
-  console.log(appointments);
-  console.log(appointments.length);
-  console.log(typeof appointments);
 
   const handleUpdateStatus = async (appointmentId, status) => {
     try {
       const { data } = await axios.put(
         `http://localhost:8000/api/v1/appoinments/update/${appointmentId}`,
-        { status }
-        //{ withCredentials: true }
+        { status },
+        { withCredentials: true }
       );
       setAppointments((prevAppointments) =>
         prevAppointments.map((appointment) =>
-          appointment._id === appointmentId
-            ? { ...appointment, status }
-            : appointment
+          appointment._id === appointmentId ? { ...appointment, status } : appointment
         )
       );
       toast.success(data.message);
@@ -50,146 +43,126 @@ const DoctorHome = () => {
     }
   };
 
-  const { firstName, lastName } = JSON.parse(localStorage.getItem("doctor"));
-  // console.log(firstName);
+  const handlePrescribe = (appointment) => {
+    setSelectedAppointment(appointment);
+  };
+
+  const handleClosePrescribe = () => {
+    setSelectedAppointment(null);
+  };
+
+  const { firstName, lastName, doctorDepartment, email, phoneNumber, gender, nic, dob, avatar } = JSON.parse(localStorage.getItem("doctor"));
   const doc = JSON.parse(localStorage.getItem("doctor"));
-  // console.log(doc.avatar.url);
-  // console.log(appointments[0].doctor.firstName)
-  // console.log(Object.values(/appointments[1]))
-  // const k = Object.keys(appointments)[0];
-  // console.log(appointments.k.firstName);
-  const k = Object.keys(appointments);
-  const b = Object.keys(appointments);
-  console.log([appointments[0]].firstName);
-  console.log(k);
-  var c=0;
-  appointments.forEach((obj)=>{
-    if (obj.doctorId === doc._id){
-      c++
-    }
-  })
+
+  const docAppointments = appointments.filter(appointment => appointment.doctorId === doc._id);
+
   return (
-    <div className="w-full h-screen bg-gradient-to-tl from-[#76dbcf]">
+    <div className="w-full h-screen bg-gray-200">
       <Navbar />
-      <div className="h-28 flex justify-around mt-10">
-        <div className="w-1/3 font-semibold text-3xl flex gap-5 items-center">
-          <img
-            className="w-28 h-28 rounded-full border-2 border-emerald-300"
-            src={doc.avatar.url}
-            alt=""
-          />
-          <div className="h-full flex flex-col justify-center">
-            <h1>Hi, Dr. {firstName + " " + lastName}</h1>
-            <h1>{doc.doctorDepartment}</h1>
+      <div className="mt-20 pt-10 px-10">
+        <div className="bg-white p-6 rounded-lg shadow-lg">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center">
+              <img
+                className="w-28 h-28 rounded-full border-2 border-emerald-300"
+                src={avatar.url}
+                alt=""
+              />
+              <div className="ml-6">
+                <h1 className="text-3xl font-semibold">Dr. {firstName} {lastName}</h1>
+                <p className="text-xl">{doctorDepartment}</p>
+                <p>Email: {email}</p>
+                <p>Phone: {phoneNumber}</p>
+                <p>Gender: {gender}</p>
+                <p>NIC: {nic}</p>
+                <p>DOB: {dob}</p>
+              </div>
+            </div>
+            <div className="bg-[#FA7070] p-4 rounded-lg text-white text-2xl font-semibold">
+              Appointments Scheduled: {docAppointments.length}
+            </div>
           </div>
         </div>
-        <div className="w-1/3  flex h-full bg-[#76dbcf] p-4 font-semibold text-2xl rounded-3xl items-center justify-center">
-          Appointments Scheduled : {c}
-        </div>
-      </div>
-      <div className="px-28 mt-10">
-        <h1 className=" ml-10 font-semibold text-2xl">
-          Appointment Details :{" "}
-        </h1>
-        <table className="w-full mt-4">
-          <thead>
-            <tr>
-              <th>Patient</th>
-              <th>Date</th>
-              <th>Status</th>
-              <th>Visited</th>
-            </tr>
-          </thead>
-          <tbody className="">
-            {k && k.length > 0 ? (
-              k.map((k) => (
-                <tr className="">
-                  {appointments[k].doctor.firstName === firstName &&
-                  appointments[k].doctor.lastName === lastName ? (
-                    <>
-                      <td className="name text-center rounded-l-2xl">
-                        {appointments[k].firstName} {appointments[k].lastName}
-                      </td>
-                      <td className="date text-center">
-                        {appointments[k].appointment_date.substring(0, 10)}
-                      </td>
-                      <td className="status text-center">
-                        {/* {appointments[k].status} */}
-                        <select
-                          id="statusup"
-                          className={
-                            appointments[k].status === "Pending"
-                              ? "value-pending"
-                              : appointments[k].status === "Accepted"
-                              ? "value-accepted"
-                              : "value-rejected"
-                          }
-                          value={appointments[k].status}
-                          onChange={(e) =>
-                            handleUpdateStatus(
-                              appointments[k]._id,
-                              e.target.value
-                            )
-                          }
-                        >
-                          <option value="Pending" className="value-pending">
-                            Pending
-                          </option>
-                          <option value="Accepted" className="value-accepted">
-                            Accepted
-                          </option>
-                          <option value="Rejected" className="value-rejected">
-                            Rejected
-                          </option>
-                        </select>
-                      </td>
-                      <td className="visited flex justify-center">
-                        {appointments[k].hasVisited === true ? (
-                          <TicketCheck fill="#00ff1a" className="green" />
-                        ) : (
-                          <TicketX fill="red" className="red" />
-                        )}
-                      </td>
-                    </>
-                  ) : (
-                    <h1></h1>
-                  )}
-                </tr>
-              ))
-            ) : (
-              <h1>No app</h1>
-            )}
-
-            {/* {appointments && appointments.length > 0 ? (
-              Object.keys(appointments).map((key) => (
-                <h1>
-                  {key}
-                </h1>
-              ))
-            ) : (
-              <h1>one</h1>
-            )} */}
-            {/* .map((appointment) => (
-                  <tr key={appointment._id}>
-                    <td>{`${appointment.firstName} ${appointment.lastName}`}</td>
-                    <td>{appointment.appointment_date.substring(0, 10)}</td>
+        <div className="mt-10">
+          <h1 className="ml-10 font-semibold text-2xl">Appointment Details:</h1>
+          <table className="w-full mt-4 bg-white shadow-md rounded-lg">
+            <thead className="bg-[#FA7070] text-white">
+              <tr>
+                <th className="py-2 px-4">Patient</th>
+                <th className="py-2 px-4">Date</th>
+                <th className="py-2 px-4">Status</th>
+                <th className="py-2 px-4">Visited</th>
+                <th className="py-2 px-4">Prescribe</th>
+              </tr>
+            </thead>
+            <tbody>
+              {docAppointments.length > 0 ? (
+                docAppointments.map((appointment) => (
+                  <tr key={appointment._id} className="border-b border-gray-200 font-bold">
+                    <td className="py-4 px-4 text-center rounded-l-lg">
+                      {appointment.firstName} {appointment.lastName}
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      {appointment.appointment_date.substring(0, 10)}
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      <select
+                        id="statusup"
+                        className={
+                          appointment.status === "Pending"
+                            ? "value-pending"
+                            : appointment.status === "Accepted"
+                            ? "value-accepted"
+                            : "value-rejected"
+                        }
+                        value={appointment.status}
+                        onChange={(e) => handleUpdateStatus(appointment._id, e.target.value)}
+                      >
+                        <option value="Pending" className="value-pending">
+                          Pending
+                        </option>
+                        <option value="Accepted" className="value-accepted">
+                          Accepted
+                        </option>
+                        <option value="Rejected" className="value-rejected">
+                          Rejected
+                        </option>
+                      </select>
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      {appointment.hasVisited ? (
+                        <TicketCheck fill="#00ff1a" className="green" />
+                      ) : (
+                        <TicketX fill="red" className="red" />
+                      )}
+                    </td>
+                    <td className="py-4 px-4 text-center rounded-r-lg">
+                      <button
+                        className="bg-green-500 text-white px-4 py-2 rounded-full"
+                        onClick={() => handlePrescribe(appointment)}
+                      >
+                        Prescribe
+                      </button>
+                    </td>
                   </tr>
                 ))
-            ) : (
-              <h1>no app</h1>
-            )} */}
-            {/* {appointments && appointments.length > 0
-              ? appointments.filter()
-              : hi} */}
-            {/* <tr className="">
-              <td className="text-center">HI</td>
-              <td className="text-center">HI</td>
-              <td className="text-center">HI</td>
-              <td className="text-center">HI</td>
-            </tr> */}
-          </tbody>
-        </table>
+              ) : (
+                <tr>
+                  <td colSpan="5" className="py-4 text-center text-gray-500">
+                    No Appointments Scheduled
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
+      {selectedAppointment && (
+        <Prescribe
+          appointment={selectedAppointment}
+          onClose={handleClosePrescribe}
+        />
+      )}
     </div>
   );
 };
