@@ -109,6 +109,8 @@ const updateAppointmentStatus = asyncHandler(async (req, res, next) => {
 });
 const deleteAppointment = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
+  // console.log(id);
+  console.log(`Delete appointment request received for ID: ${id}`);
   const appointment = await Appointment.findById(id);
   if (!appointment) {
     return next(new ErrorHandler("Appointment Not Found!", 404));
@@ -119,6 +121,7 @@ const deleteAppointment = asyncHandler(async (req, res, next) => {
     message: "Appointment Deleted!",
   });
 });
+
 
 export {
   postAppointment,

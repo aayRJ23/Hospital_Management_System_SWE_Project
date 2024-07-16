@@ -26,110 +26,97 @@ const PatientHome = () => {
     };
     fetchAppointments();
   }, []);
-  console.log(appointments);
-  console.log(appointments.length);
-  console.log(typeof appointments);
 
-  const { firstName, lastName } = JSON.parse(localStorage.getItem("patient"));
-  console.log(firstName);
+  const { firstName, lastName, email, phone, gender, nic, dob } = JSON.parse(localStorage.getItem("patient"));
   const pat = JSON.parse(localStorage.getItem("patient"));
   const k = Object.keys(appointments);
   const b = k;
-  // console.log([appointments[0]].firstName);
-  console.log(k);
-  var c=0;
-  appointments.forEach((obj)=>{
-    if (obj.patientId === pat._id){
-      c++
+  var c = 0;
+  appointments.forEach((obj) => {
+    if (obj.patientId === pat._id) {
+      c++;
     }
-  })
+  });
+
+  const handleCancel = async (id) => {
+    try {
+      console.log(`Attempting to delete appointment with ID: ${id}`);
+      const response = await axios.delete(`http://localhost:8000/api/v1/appoinments/delete/${id}`, { withCredentials: true });
+      setAppointments(appointments.filter((appointment) => appointment._id !== id));
+      toast.success("Appointment cancelled successfully");
+    } catch (error) {
+      console.error("Error response:", error.response); // Log the full error response
+      toast.error("Failed to cancel the appointment");
+    }
+  };
+  
+  
 
   return (
-    <div className="w-full h-screen bg-gradient-to-tl from-[#76dbcf]">
+    <div className="w-full h-screen bg-gray-100">
       <Navbar />
-      <div className="h-28 flex justify-around mt-10 px-60">
-        <div className="w-1/3 font-semibold text-3xl flex gap-5 items-center">
-          <div className="h-full flex flex-col justify-center">
-            <h1>Hi, {firstName + " " + lastName}</h1>
+      <div className="mt-20 pt-10 h-28 flex justify-around px-60">
+        <div className=" w-1/3 font-semibold text-3xl flex gap-5 items-center bg-white border border-black rounded-lg p-10 pt-20 pb-20">
+          <div className="h-full flex flex-col justify-center text-sm">
+            <h1 className="text-lg">Hi, {firstName + " " + lastName}</h1>
+            <p>Email: {email}</p>
+            <p>Phone: {phone}</p>
+            <p>Gender: {gender}</p>
+            <p>NIC: {nic}</p>
+            <p>DOB: {dob}</p>
           </div>
         </div>
-        <div className="w-1/3 flex h-full bg-[#76dbcf] px-4 font-semibold text-2xl rounded-3xl items-center justify-center">
-          Appointments Scheduled : {c}
+        <div className=" w-1/3 flex h-full bg-[#FA7070] px-4 font-semibold text-2xl rounded-3xl items-center justify-center text-white">
+          Appointments Scheduled: {c}
         </div>
       </div>
-      <div className="px-28 mt-10">
-        <h1 className=" ml-10 font-semibold text-2xl">
-          Appointment Details :{" "}
-        </h1>
-        <table className="w-full mt-4">
-          <thead>
+      <div className="px-28 mt-20 pt-5">
+        <h1 className="ml-10 font-semibold text-2xl">Appointment Details:</h1>
+        <table className="w-full mt-4 bg-white shadow-md rounded-lg">
+          <thead className="bg-[#FA7070] text-white">
             <tr>
-              <th>Patient Name</th>
-              <th>Appointment Date</th>
-              <th>Appointment Status</th>
-              <th>Doctor Name</th>
-              <th>Doctor Department</th>
+              <th className="py-2">Patient Name</th>
+              <th className="py-2">Appointment Date</th>
+              <th className="py-2">Appointment Status</th>
+              <th className="py-2">Doctor Name</th>
+              <th className="py-2">Doctor Department</th>
+              <th className="py-2">Actions</th>
             </tr>
           </thead>
-          <tbody className="">
-            {k && k.length > 0 ? (
-              k.map((k) => (
-                <tr className="">
-                  {appointments[k].patientId === pat._id ? (
-                    <>
-                      <td className="name text-center rounded-l-2xl">
-                        {appointments[k].firstName} {appointments[k].lastName}
-                      </td>
-                      <td className="date text-center">
-                        {appointments[k].appointment_date.substring(0, 10)}
-                      </td>
-                      <td className="status text-center">
-                        {appointments[k].status}
-                      </td>
-                      <td className="doctor text-center">
-                        {appointments[k].doctor.firstName}{" "}
-                        {appointments[k].doctor.lastName}
-                      </td>
-                      <td className="doctor-dept text-center">
-                      {appointments[k].department}
-                      </td>
-                    </>
-                  ) : (
-                    <h1></h1>
-                  )}
-                </tr>
-              ))
-            ) : (
-              <h1>No Appointment Scheduled</h1>
-            )}
-
-            {/* {appointments && appointments.length > 0 ? (
-              Object.keys(appointments).map((key) => (
-                <h1>
-                  {key}
-                </h1>
-              ))
-            ) : (
-              <h1>one</h1>
-            )} */}
-            {/* .map((appointment) => (
-                  <tr key={appointment._id}>
-                    <td>{`${appointment.firstName} ${appointment.lastName}`}</td>
-                    <td>{appointment.appointment_date.substring(0, 10)}</td>
+          <tbody>
+            {appointments && appointments.length > 0 ? (
+              appointments.map((appointment) =>
+                appointment.patientId === pat._id ? (
+                  <tr key={appointment._id} className="border-b border-gray-200">
+                    <td className="py-2 text-center rounded-l-lg">
+                      {appointment.firstName} {appointment.lastName}
+                    </td>
+                    <td className="py-2 text-center">
+                      {appointment.appointment_date.substring(0, 10)}
+                    </td>
+                    <td className="py-2 text-center">{appointment.status}</td>
+                    <td className="py-2 text-center">
+                      {appointment.doctor.firstName} {appointment.doctor.lastName}
+                    </td>
+                    <td className="py-2 text-center">{appointment.department}</td>
+                    <td className="py-2 text-center rounded-r-lg">
+                      <button
+                        onClick={() => handleCancel(appointment._id)}
+                        className="bg-red-500 text-white px-4 py-2 rounded-full hover:bg-red-600 transition duration-300"
+                      >
+                        Cancel Appointment
+                      </button>
+                    </td>
                   </tr>
-                ))
+                ) : null
+              )
             ) : (
-              <h1>no app</h1>
-            )} */}
-            {/* {appointments && appointments.length > 0
-              ? appointments.filter()
-              : hi} */}
-            {/* <tr className="">
-              <td className="text-center">HI</td>
-              <td className="text-center">HI</td>
-              <td className="text-center">HI</td>
-              <td className="text-center">HI</td>
-            </tr> */}
+              <tr>
+                <td colSpan="6" className="py-4 text-center text-gray-500">
+                  No Appointment Scheduled
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
