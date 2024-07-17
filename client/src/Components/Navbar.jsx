@@ -78,8 +78,8 @@ export const Navbar = () => {
   };
 
   return (
-    <div>
-      <div className="fixed top-0 left-0 z-50 w-full flex justify-between items-center p-5 bg-gray-200 shadow-lg">
+    <div className="">
+      <div className="fixed top-0 left-0 z-50 w-full flex justify-between items-center p-5 bg-white shadow-lg">
         <div
           className="text-2xl cursor-pointer z-50"
           onClick={() => setIsOpen(!isOpen)}
@@ -88,7 +88,7 @@ export const Navbar = () => {
         </div>
         <div className="logo w-10">
           <Link to={"/"}>
-            <img className="ml-10" src="./image.png" alt="Logo" />
+            <img className="" src="./image.png" alt="Logo" />
           </Link>
         </div>
       </div>

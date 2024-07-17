@@ -115,7 +115,7 @@ const login = () => {
                 />
               </div>
               <button
-                className="w-40 bg-[#76dbcf] rounded-2xl h-10 font-semibold"
+                className="w-40 bg-[#fa7070] rounded-2xl h-10 text-white font-semibold"
                 type="submit"
               >
                 Login
@@ -123,7 +123,7 @@ const login = () => {
             </form>
           </div>
         </div>
-        <div className="w-1/2 h-screen bg-[#76dbcf] flex flex-col place-content-center items-center rounded-l-full">
+        <div className="w-1/2 h-screen bg-[#fa7070] flex flex-col place-content-center items-center rounded-l-full">
           <h2 className="text-4xl flex w-full justify-center font-bold">
             Hello, We are Aaragya!!
           </h2>

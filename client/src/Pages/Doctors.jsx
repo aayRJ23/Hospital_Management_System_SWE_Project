@@ -16,7 +16,7 @@ const Doctors = () => {
         const { data } = await axios.get(
           "http://localhost:8000/api/v1/users/doctors",
           {
-            withCredentials: true
+            withCredentials: true,
           }
         );
         console.log(data);
@@ -39,13 +39,14 @@ const Doctors = () => {
           <h1 className="font-semibold text-3xl mb-3">Our Doctors</h1>
         </div>
         <div className="doc-details p-5 flex justify-around flex-wrap">
-      {doctors && doctors.length > 0 ? (
-        doctors.map((element) => (
-          <RemoveDoctors key={element._id} data={element} />
-        ))):(
-          <h1>No Doctors</h1>
-        )}
-      </div>
+          {doctors && doctors.length > 0 ? (
+            doctors.map((element) => (
+              <RemoveDoctors key={element._id} data={element} />
+            ))
+          ) : (
+            <h1>No Doctors</h1>
+          )}
+        </div>
         {/* <div className="doc-details p-5 flex justify-around flex-wrap">
           {doctors && doctors.length > 0 ? (
             doctors.map((element) => {

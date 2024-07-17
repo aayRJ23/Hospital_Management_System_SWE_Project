@@ -60,9 +60,9 @@ const Appointment = () => {
   // let dd = "";
 
   return (
-    <div className="sec-1 w-full h-full bg-gradient-to-tl from-[#76dbcf]">
+    <div className="sec-1 w-full bg-gradient-to-tl from-[#fa7070]">
       <Navbar />
-      <div className="header w-full flex justify-center mt-7">
+      <div className="header w-full flex justify-center mt-20 pt-10">
         <h1 className="font-semibold text-2xl">Our Doctors</h1>
       </div>
       <div className="doc-details p-5 flex justify-around flex-wrap">

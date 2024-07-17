@@ -42,7 +42,7 @@ const AppointDoctors = ({ data, onClick }) => {
         // onClick={() => {
         //   setShowModal(true);
         // }}
-        className="w-40 bg-[#76dbcf] rounded-2xl h-10 font-semibold mt-2"
+        className="w-40 bg-[#fa7070] text-white rounded-2xl h-10 font-semibold mt-2"
       >
         Book Appointment
       </button>

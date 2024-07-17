@@ -5,7 +5,7 @@ const AboutUs = () => {
   return (
     <>
       <Navbar />
-      <div className="max-w-7xl mx-auto py-16 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto py-16 px-4 mt-20 sm:px-6 lg:px-8">
         <h1 className="text-4xl font-bold text-center text-teal-600 mb-12">
           About Us
         </h1>
@@ -83,46 +83,41 @@ const AboutUs = () => {
           <h2 className="text-3xl font-semibold text-teal-600 mb-8">
             Meet the Team
           </h2>
-          <div className=" gap-16 flex flex-wrap">
+          <div className=" gap-16 flex flex-wrap justify-around">
             {[
               {
-                name: "Dipa Ghosh",
+                name: "Aayush Chatterjee",
                 role: "Chief Medical Officer",
                 image: "dipa.jpg",
               },
               {
-                name: "Biswarup Naha",
+                name: "Aayush Raj",
                 role: "Customer Support Lead",
                 image: "me.png",
               },
               {
-                name: "Aayush Chatterjee",
+                name: "Aniket Singha",
                 role: "Lead Developer",
                 image:
                   "aayush.jpg",
               },
               {
-                name: "Arpita Kar",
+                name: "Aman Kumar",
                 role: "Operations Manager",
                 image:
                   "arpita.jpg",
               },
-              {
-                name: "Suraiya Midda",
-                role: "Human Resource",
-                image: "suraiya.jpg",
-              },
             ].map((teamMember, index) => (
               <div key={index} className="text-center mx-4">
-                <img
+                {/* <img
                   src={teamMember.image}
                   alt={teamMember.name}
                   className="rounded-full w-32 h-32 mx-auto mb-4 shadow-lg"
-                />
+                /> */}
                 <h3 className="text-xl font-bold text-gray-800">
                   {teamMember.name}
                 </h3>
-                <p className="text-teal-600">{teamMember.role}</p>
+                {/* <p className="text-teal-600">{teamMember.role}</p> */}
               </div>
             ))}
           </div>
