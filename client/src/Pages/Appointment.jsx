@@ -5,9 +5,12 @@ import AppointForm from "../Components/AppointForm";
 import { Link, useNavigate } from "react-router-dom";
 import { Context } from "../main";
 import AppointDoctors from "../Components/AppointDoctors";
+import { FaSearch } from "react-icons/fa";
 
 const Appointment = () => {
   const [selectedCard, setSelectedCard] = useState(null);
+  const [searchName, setSearchName] = useState("");
+  const [searchDepartment, setSearchDepartment] = useState("");
 
   const handleCardClick = (cardData) => {
     setSelectedCard(cardData);
@@ -58,6 +61,20 @@ const Appointment = () => {
   // let df = "";
   // let dl = "";
   // let dd = "";
+  const filteredDoctors = doctors.filter((doctor) => {
+    const matchesName =
+      searchName === "" ||
+      doctor.firstName.toLowerCase().includes(searchName.toLowerCase()) ||
+      doctor.lastName.toLowerCase().includes(searchName.toLowerCase());
+    const matchesDepartment =
+      searchDepartment === "" ||
+      doctor.doctorDepartment
+        .toLowerCase()
+        .includes(searchDepartment.toLowerCase());
+
+    return matchesName && matchesDepartment;
+  });
+
 
   return (
     <div className="sec-1 w-full bg-gradient-to-tl from-[#fa7070]">
@@ -65,16 +82,42 @@ const Appointment = () => {
       <div className="header w-full flex justify-center mt-20 pt-10">
         <h1 className="font-semibold text-2xl">Our Doctors</h1>
       </div>
+      <div className="flex justify-center my-6">
+        <div className="relative mx-2">
+          <input
+            type="text"
+            className="p-2 border border-black rounded-lg w-64"
+            placeholder="Search by name"
+            value={searchName}
+            onChange={(e) => setSearchName(e.target.value)}
+          />
+          <FaSearch className="absolute right-3 top-3 text-gray-400" />
+        </div>
+        <div className="relative mx-2">
+          <input
+            type="text"
+            className="p-2 border border-black rounded-lg w-64"
+            placeholder="Search by department"
+            value={searchDepartment}
+            onChange={(e) => setSearchDepartment(e.target.value)}
+          />
+          <FaSearch className="absolute right-3 top-3 text-gray-400" />
+        </div>
+      </div>
       <div className="doc-details p-5 flex justify-around flex-wrap">
-      {doctors && doctors.length > 0 ? (
-        doctors.map((element) => (
-          <AppointDoctors key={element._id} data={element} onClick={handleCardClick} />
-        ))):(
+        {filteredDoctors && filteredDoctors.length > 0 ? (
+          filteredDoctors.map((element) => (
+            <AppointDoctors
+              key={element._id}
+              data={element}
+              onClick={handleCardClick}
+            />
+          ))
+        ) : (
           <h1>No Doctors</h1>
         )}
       </div>
       <AppointForm data={selectedCard} onClose={handleCloseModal} />
-      
     </div>
   );
 };

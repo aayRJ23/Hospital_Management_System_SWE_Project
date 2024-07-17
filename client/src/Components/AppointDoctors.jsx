@@ -22,7 +22,7 @@ const AppointDoctors = ({ data, onClick }) => {
         <img className="w-28 h-28 rounded-full" src={data.avatar && data.avatar.url} alt="" />
       </div>
       <h1 className="text-black font-semibold text-xl ">
-        {data.firstName}
+        Dr. {data.firstName}
       </h1>
       <h1 className="text-black font-semibold text-xl ">
         {data.lastName}
