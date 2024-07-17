@@ -103,7 +103,7 @@ const AddDoctor = () => {
     <div className="flex">
       <Sidebar />
       <div className="w-full flex items-center justify-center">
-        <div className="w-full pl-20 pt-7 pr-20">
+        <div className="ml-24 w-full pl-20 pt-7 pr-20">
           <div className="add-admin-form bg-white w-full h-fit rounded-2xl px-5 py-3 flex flex-col items-center shadow-lg">
             <h1 className="font-bold text-3xl mb-5 text-center bg-red-500 text-white py-2 px-4 rounded-full">
               Add New Doctor
