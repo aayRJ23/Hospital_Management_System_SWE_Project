@@ -1,6 +1,15 @@
 import React, { useState } from "react";
 import { IoMdCloseCircleOutline } from "react-icons/io";
-import { MdPerson, MdEmail, MdPhone, MdFingerprint, MdCake, MdLocationOn, MdEvent, MdWc } from "react-icons/md";
+import {
+  MdPerson,
+  MdEmail,
+  MdPhone,
+  MdFingerprint,
+  MdCake,
+  MdLocationOn,
+  MdEvent,
+  MdWc,
+} from "react-icons/md";
 import axios from "axios";
 import { toast } from "react-toastify";
 
@@ -71,14 +80,19 @@ const AppointForm = ({ data, onClose }) => {
   };
 
   return (
-    <div className="mt-5 fixed inset-0 bg-opacity-30 backdrop-blur-sm flex justify-center items-center overflow-y-auto">
-  <div className="w-2/3 flex flex-col border border-black rounded-2xl bg-white p-6 max-h-screen overflow-y-auto">
+    <div className="z-50 fixed inset-0 bg-opacity-30 backdrop-blur-sm flex justify-center items-center overflow-y-auto z-20">
+      <div className="w-2/3 flex flex-col border border-black rounded-2xl bg-white p-6 max-h-screen overflow-y-auto">
         <button onClick={onClose} className="place-self-end mb-3">
           <IoMdCloseCircleOutline size={30} />
         </button>
         <div className="w-full flex flex-col items-center">
-          <h1 className="font-semibold text-2xl mb-3">Schedule Your Appointment</h1>
-          <form className="w-full flex flex-col justify-center items-center" onSubmit={handleAppointment}>
+          <h1 className="font-semibold text-2xl mb-3">
+            Schedule Your Appointment
+          </h1>
+          <form
+            className="w-full flex flex-col justify-center items-center"
+            onSubmit={handleAppointment}
+          >
             <div className="w-full flex flex-col md:flex-row justify-between mb-6">
               <div className="w-full md:w-1/2 px-2 mb-4 md:mb-0">
                 <label className="text-blue-800 mb-2 flex items-center">

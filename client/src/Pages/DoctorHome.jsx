@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { Navbar } from "../Components/Navbar";
-import { TicketX, TicketCheck } from "lucide-react";
+import { TicketX, TicketCheck,CircleCheckBig,CircleX } from "lucide-react";
 import './AppStatus.css';
 import Prescribe from "./Prescribe.jsx";
 
@@ -129,11 +129,11 @@ const DoctorHome = () => {
                         </option>
                       </select>
                     </td>
-                    <td className="py-4 px-4 text-center">
+                    <td className="py-4 px-4 flex justify-center mt-2 text-center">
                       {appointment.hasVisited ? (
-                        <TicketCheck fill="#00ff1a" className="green" />
+                        <CircleCheckBig className="green" />
                       ) : (
-                        <TicketX fill="red" className="red" />
+                        <CircleX className="red" />
                       )}
                     </td>
                     <td className="py-4 px-4 text-center rounded-r-lg">

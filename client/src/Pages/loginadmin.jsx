@@ -83,7 +83,7 @@ const loginadmin = () => {
                 />
               </div>
               <button
-                className="w-40 bg-[#76dbcf] rounded-2xl h-10 font-semibold"
+                className="w-40 bg-[#fa7070] rounded-2xl h-10 text-white font-semibold"
                 type="submit"
               >
                 Login
@@ -91,11 +91,11 @@ const loginadmin = () => {
             </form>
           </div>
         </div>
-        <div className="w-1/2 h-screen bg-[#76dbcf] flex flex-col place-content-center items-center rounded-l-full">
+        <div className="w-1/2 h-screen bg-[#fa7070] flex flex-col place-content-center items-center rounded-l-full">
           <Link to={"/"}>
             <img className="w-40 mb-10" src="./image.png" alt="" />
           </Link>
-          <h1 className="text-3xl font-semibold">Aaragya</h1>
+          <h1 className="text-3xl text-white font-semibold">Aaragya</h1>
         </div>
       </div>
     </>
