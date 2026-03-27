@@ -1,8 +1,10 @@
+// client/src/Pages/AdminHome.jsx
 import React, { useContext, useState, useEffect } from "react";
 import Sidebar from "../Components/Sidebar";
 import { Context } from "../main";
 import axios from "axios";
 import PieChart from "../Components/PieChart";
+import NotificationBell from "../Components/NotificationBell";
 
 const AdminHome = () => {
   const { isAuthenticated, setIsAuthenticated } = useContext(Context);
@@ -78,7 +80,6 @@ const AdminHome = () => {
     fetchAdmins();
   }, [isAuthenticated]);
 
-  // ✅ FIX: Safe parse — if "admin" is missing from localStorage it no longer crashes the whole page
   const adminRaw = localStorage.getItem("admin");
   if (!adminRaw) {
     return (
@@ -109,6 +110,12 @@ const AdminHome = () => {
   return (
     <div className="flex">
       <Sidebar />
+
+      {/* ── Notification Bell fixed top-right ── */}
+      <div className="fixed top-4 right-4 z-50">
+        <NotificationBell />
+      </div>
+
       <div className="w-full pt-2 pr-8 pl-14 ml-8">
         <div className="w-full pt-8">
           <div className="w-full bg-sky-100 h-fit rounded-2xl p-5 flex flex-col items-center mb-5">

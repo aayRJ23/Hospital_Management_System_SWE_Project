@@ -6,18 +6,10 @@ import { User } from "../models/user.model.js";
 export const isAdminAuthenticated = asyncHandler(async (req, res, next) => {
   const token = req.cookies.adminToken;
   if (!token) return next(new ErrorHandler("Admin is not authenticated", 401));
-
-  // ✅ FIX: Use jwt.verify() instead of jwt.decode() to actually validate the token signature
   const decoded = jwt.verify(token, process.env.JWT_SECRET);
   req.user = await User.findById(decoded.id);
-
   if (req.user.role !== "Admin") {
-    return next(
-      new ErrorHandler(
-        `${req.user.role} is not authorized for this resource!`,
-        403
-      )
-    );
+    return next(new ErrorHandler(`${req.user.role} is not authorized for this resource!`, 403));
   }
   next();
 });
@@ -25,38 +17,40 @@ export const isAdminAuthenticated = asyncHandler(async (req, res, next) => {
 export const isPatientAuthenticated = asyncHandler(async (req, res, next) => {
   const token = req.cookies.patientToken;
   if (!token) return next(new ErrorHandler("Patient is not authenticated", 401));
-
-  // ✅ FIX: Use jwt.verify() instead of jwt.decode()
   const decoded = jwt.verify(token, process.env.JWT_SECRET);
   req.user = await User.findById(decoded.id);
-
   if (req.user.role !== "Patient") {
-    return next(
-      new ErrorHandler(
-        `${req.user.role} is not authorized for this resource!`,
-        403
-      )
-    );
+    return next(new ErrorHandler(`${req.user.role} is not authorized for this resource!`, 403));
   }
   next();
 });
 
 export const isDoctorAuthenticated = asyncHandler(async (req, res, next) => {
   const token = req.cookies.doctorToken;
-  // ✅ FIX: Error message was incorrectly saying "Patient" — fixed to "Doctor"
   if (!token) return next(new ErrorHandler("Doctor is not authenticated", 401));
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  req.user = await User.findById(decoded.id);
+  if (req.user.role !== "Doctor") {
+    return next(new ErrorHandler(`${req.user.role} is not authorized for this resource!`, 403));
+  }
+  next();
+});
 
-  // ✅ FIX: Use jwt.verify() instead of jwt.decode()
+// ✅ NEW: Universal middleware — accepts any logged-in role
+export const isAnyAuthenticated = asyncHandler(async (req, res, next) => {
+  const token =
+    req.cookies.adminToken ||
+    req.cookies.patientToken ||
+    req.cookies.doctorToken;
+
+  if (!token) return next(new ErrorHandler("User is not authenticated", 401));
+
   const decoded = jwt.verify(token, process.env.JWT_SECRET);
   req.user = await User.findById(decoded.id);
 
-  if (req.user.role !== "Doctor") {
-    return next(
-      new ErrorHandler(
-        `${req.user.role} is not authorized for this resource!`,
-        403
-      )
-    );
+  if (!req.user) {
+    return next(new ErrorHandler("User not found", 404));
   }
+
   next();
 });

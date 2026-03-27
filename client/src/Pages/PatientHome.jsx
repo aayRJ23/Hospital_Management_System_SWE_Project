@@ -1,3 +1,4 @@
+// client/src/Pages/PatientHome.jsx
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -6,13 +7,13 @@ import { useNavigate } from "react-router-dom";
 import Describe from "./Describe.jsx";
 import ReceiveBill from "../Components/ReceiveBill.jsx";
 import PayBillPortal from "../Components/PayBillPortal";
+import NotificationBell from "../Components/NotificationBell";
 
 const PatientHome = () => {
   const [appointments, setAppointments] = useState([]);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [viewBillAppointment, setViewBillAppointment] = useState(null);
   const [payBillAppointment, setPayBillAppointment] = useState(null);
-  // Track which appointmentIds have a prescription submitted by doctor
   const [prescriptionExists, setPrescriptionExists] = useState({});
   const navigateTo = useNavigate();
 
@@ -39,7 +40,6 @@ const PatientHome = () => {
     fetchAppointments();
   }, []);
 
-  // Once appointments load, check prescription existence for each Accepted appointment
   useEffect(() => {
     const checkPrescriptions = async () => {
       const patAppts = appointments.filter(
@@ -53,9 +53,9 @@ const PatientHome = () => {
               `http://localhost:8000/api/v1/prescribe/getPrescribe/${appt._id}`,
               { withCredentials: true }
             );
-            results[appt._id] = true; // prescription exists
+            results[appt._id] = true;
           } catch {
-            results[appt._id] = false; // no prescription yet
+            results[appt._id] = false;
           }
         })
       );
@@ -94,6 +94,12 @@ const PatientHome = () => {
   return (
     <div className="w-full min-h-screen bg-gray-100">
       <Navbar />
+
+      {/* ── Notification Bell fixed top-right ── */}
+      <div className="fixed top-4 right-4 z-50">
+        <NotificationBell />
+      </div>
+
       <div className="mt-20 pt-10 h-28 flex justify-around px-60">
         <div className="w-2/5 font-semibold text-3xl flex gap-5 items-center bg-white border border-black rounded-lg p-10 pt-20 pb-20">
           <div className="h-full flex flex-col justify-center text-sm">
@@ -134,20 +140,13 @@ const PatientHome = () => {
               {patAppointments.length > 0 ? (
                 patAppointments.map((appointment, index) => (
                   <tr key={appointment._id} className="border-b border-gray-200">
-                    {/* # */}
                     <td className="py-2 px-3 text-center font-bold border-r border-gray-200">{index + 1}</td>
-
-                    {/* Patient Name */}
                     <td className="py-2 px-3 text-center font-bold border-r border-gray-200 whitespace-nowrap">
                       {appointment.firstName} {appointment.lastName}
                     </td>
-
-                    {/* Appointment Date */}
                     <td className="py-2 px-3 text-center font-bold border-r border-gray-200 whitespace-nowrap">
                       {appointment.appointment_date.substring(0, 10)}
                     </td>
-
-                    {/* Status */}
                     <td className="py-2 px-3 text-center font-bold border-r border-gray-200">
                       <span
                         className={`px-3 py-1 rounded-full text-white text-xs ${
@@ -161,18 +160,12 @@ const PatientHome = () => {
                         {appointment.status}
                       </span>
                     </td>
-
-                    {/* Doctor Name */}
                     <td className="py-2 px-3 text-center font-bold border-r border-gray-200 whitespace-nowrap">
                       {appointment.doctor.firstName} {appointment.doctor.lastName}
                     </td>
-
-                    {/* Doctor Department */}
                     <td className="py-2 px-3 text-center font-bold border-r border-gray-200 whitespace-nowrap">
                       {appointment.department}
                     </td>
-
-                    {/* Scheduled Date */}
                     <td className="py-2 px-3 text-center font-bold border-r border-gray-200 whitespace-nowrap">
                       {appointment.scheduledDate ? (
                         <span className="text-green-700">{appointment.scheduledDate}</span>
@@ -180,8 +173,6 @@ const PatientHome = () => {
                         <span className="text-gray-400 font-normal italic text-xs">Not Scheduled</span>
                       )}
                     </td>
-
-                    {/* Scheduled Time */}
                     <td className="py-2 px-3 text-center font-bold border-r border-gray-200 whitespace-nowrap">
                       {appointment.scheduledTime ? (
                         <span className="text-green-700">{appointment.scheduledTime}</span>
@@ -189,8 +180,6 @@ const PatientHome = () => {
                         <span className="text-gray-400 font-normal italic text-xs">Not Scheduled</span>
                       )}
                     </td>
-
-                    {/* Video Call */}
                     <td className="py-2 px-3 text-center font-bold border-r border-gray-200">
                       {appointment.videoCallLink ? (
                         <a
@@ -205,8 +194,6 @@ const PatientHome = () => {
                         <span className="text-gray-400 font-normal italic text-xs whitespace-nowrap">No Link Yet</span>
                       )}
                     </td>
-
-                    {/* Prescription */}
                     <td className="py-2 px-3 text-center font-bold border-r border-gray-200">
                       {appointment.status === "Pending" && (
                         <button
@@ -218,7 +205,6 @@ const PatientHome = () => {
                       )}
                       {appointment.status === "Accepted" && (
                         prescriptionExists[appointment._id] === true ? (
-                          // Prescription submitted by doctor — allow viewing
                           <button
                             onClick={() => handleGetPrescription(appointment)}
                             className="bg-green-500 text-white px-4 py-1.5 rounded-full hover:bg-green-600 transition duration-300 text-xs whitespace-nowrap"
@@ -226,7 +212,6 @@ const PatientHome = () => {
                             Check Prescription
                           </button>
                         ) : (
-                          // No prescription yet — show disabled button
                           <button
                             disabled
                             className="bg-gray-300 text-gray-500 px-4 py-1.5 rounded-full cursor-not-allowed text-xs whitespace-nowrap"
@@ -245,8 +230,6 @@ const PatientHome = () => {
                         </button>
                       )}
                     </td>
-
-                    {/* Billing & Payment */}
                     <td className="py-2 px-3 text-center font-bold">
                       {appointment.paymentStatus === "BillNotSend" && (
                         <button className="bg-gray-400 text-white px-4 py-1.5 rounded-full cursor-not-allowed text-xs whitespace-nowrap" disabled>

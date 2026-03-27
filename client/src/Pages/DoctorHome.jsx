@@ -1,3 +1,4 @@
+// client/src/Pages/DoctorHome.jsx
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -5,6 +6,7 @@ import { Navbar } from "../Components/Navbar";
 import "./AppStatus.css";
 import Prescribe from "./Prescribe.jsx";
 import { useNavigate } from "react-router-dom";
+import NotificationBell from "../Components/NotificationBell";
 
 const DoctorHome = () => {
   const [appointments, setAppointments] = useState([]);
@@ -143,6 +145,12 @@ const DoctorHome = () => {
   return (
     <div className="w-full min-h-screen bg-gray-200">
       <Navbar />
+
+      {/* ── Notification Bell fixed top-right (above Navbar's z-index range) ── */}
+      <div className="fixed top-4 right-4 z-50">
+        <NotificationBell />
+      </div>
+
       <div className="mt-20 pt-10 px-10">
         {/* Doctor Profile Card */}
         <div className="bg-white p-6 rounded-lg shadow-lg">
@@ -198,20 +206,13 @@ const DoctorHome = () => {
                       key={appointment._id}
                       className="border-b border-gray-200 font-bold"
                     >
-                      {/* # */}
                       <td className="py-4 px-3 text-center">{index + 1}</td>
-
-                      {/* Patient Name */}
                       <td className="py-4 px-3 text-center whitespace-nowrap">
                         {appointment.firstName} {appointment.lastName}
                       </td>
-
-                      {/* Appointment Date */}
                       <td className="py-4 px-3 text-center whitespace-nowrap">
                         {appointment.appointment_date.substring(0, 10)}
                       </td>
-
-                      {/* Status Dropdown */}
                       <td className="py-4 px-3 text-center">
                         <select
                           id="statusup"
@@ -232,8 +233,6 @@ const DoctorHome = () => {
                           <option value="Rejected">Rejected</option>
                         </select>
                       </td>
-
-                      {/* Scheduled Date */}
                       <td className="py-4 px-3 text-center whitespace-nowrap">
                         {appointment.scheduledDate ? (
                           <span className="text-green-700">{appointment.scheduledDate}</span>
@@ -241,8 +240,6 @@ const DoctorHome = () => {
                           <span className="text-gray-400 font-normal italic text-xs">Not Scheduled</span>
                         )}
                       </td>
-
-                      {/* Scheduled Time */}
                       <td className="py-4 px-3 text-center whitespace-nowrap">
                         {appointment.scheduledTime ? (
                           <span className="text-green-700">{appointment.scheduledTime}</span>
@@ -250,8 +247,6 @@ const DoctorHome = () => {
                           <span className="text-gray-400 font-normal italic text-xs">Not Scheduled</span>
                         )}
                       </td>
-
-                      {/* Video Call */}
                       <td className="py-4 px-3 text-center">
                         {appointment.videoCallLink ? (
                           <a
@@ -280,8 +275,6 @@ const DoctorHome = () => {
                           <span className="text-gray-400 font-normal italic text-xs whitespace-nowrap">No Link Generated</span>
                         )}
                       </td>
-
-                      {/* Prescribe */}
                       <td className="py-4 px-3 text-center">
                         <button
                           className="bg-green-500 text-white px-4 py-2 rounded-full whitespace-nowrap text-xs"
@@ -290,8 +283,6 @@ const DoctorHome = () => {
                           Prescribe Patient
                         </button>
                       </td>
-
-                      {/* Checking */}
                       <td className="py-4 px-3 text-center">
                         <button
                           className={`px-4 py-2 rounded-full text-white whitespace-nowrap text-xs transition-all duration-300 ${
@@ -334,15 +325,12 @@ const DoctorHome = () => {
       {videoPopupAppointment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative">
-            {/* Close */}
             <button
               onClick={() => setVideoPopupAppointment(null)}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-xl font-bold leading-none"
             >
               &times;
             </button>
-
-            {/* Header */}
             <div className="flex items-center gap-3 mb-5">
               <div className="bg-purple-100 p-3 rounded-full text-2xl">📹</div>
               <div>
@@ -352,13 +340,9 @@ const DoctorHome = () => {
                 </p>
               </div>
             </div>
-
-            {/* Info Banner */}
             <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-5 text-sm text-purple-700">
               A unique Jitsi video call link will be auto-generated and visible to both you and the patient after you confirm.
             </div>
-
-            {/* Date */}
             <div className="mb-4">
               <label className="block text-sm font-semibold text-gray-700 mb-1">
                 Consultation Date
@@ -374,8 +358,6 @@ const DoctorHome = () => {
                 Default set to appointment date: {videoPopupAppointment.appointment_date?.substring(0, 10)}
               </p>
             </div>
-
-            {/* Time */}
             <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-700 mb-1">
                 Consultation Time
@@ -387,8 +369,6 @@ const DoctorHome = () => {
                 className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-400"
               />
             </div>
-
-            {/* Buttons */}
             <div className="flex gap-3">
               <button
                 onClick={() => setVideoPopupAppointment(null)}
