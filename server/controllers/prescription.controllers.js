@@ -4,25 +4,29 @@ import { Prescription } from "../models/prescription.model.js";
 
 const postPrescription = asyncHandler(async (req, res, next) => {
   const { appointmentId, remarks, prescription, medicineRecommendation, testReferral, additionalNote } = req.body;
-  console.log(appointmentId, remarks, prescription, medicineRecommendation, testReferral, additionalNote);
 
   if (!remarks) {
     return next(new ErrorHandler("Remarks must be provided!", 400));
   }
 
-  const newPrescription = await Prescription.create({
-    appointmentId,
-    remarks,
-    prescription: prescription || "No Prescription Provided",
-    medicineRecommendation: medicineRecommendation || "No Medicine Required",
-    testReferral: testReferral || "No Test Referral",
-    additionalNote: additionalNote || "No Additional Notes"
-  });
+  // Use upsert so re-submitting updates the existing prescription instead of creating a duplicate
+  const savedPrescription = await Prescription.findOneAndUpdate(
+    { appointmentId },
+    {
+      appointmentId,
+      remarks,
+      prescription: prescription || "No Prescription Provided",
+      medicineRecommendation: medicineRecommendation || "No Medicine Required",
+      testReferral: testReferral || "No Test Referral",
+      additionalNote: additionalNote || "No Additional Notes",
+    },
+    { upsert: true, new: true, runValidators: true }
+  );
 
   res.status(200).json({
     success: true,
     message: "Prescription saved successfully!",
-    prescription: newPrescription
+    prescription: savedPrescription,
   });
 });
 

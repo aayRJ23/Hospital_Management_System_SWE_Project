@@ -50,7 +50,7 @@ const PatientHome = () => {
         patAppts.map(async (appt) => {
           try {
             await axios.get(
-              `http://localhost:8000/api/v1/prescription/getPrescribe/${appt._id}`,
+              `http://localhost:8000/api/v1/prescribe/getPrescribe/${appt._id}`,
               { withCredentials: true }
             );
             results[appt._id] = true; // prescription exists
