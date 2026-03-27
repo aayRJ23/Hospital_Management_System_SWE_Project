@@ -56,7 +56,7 @@ const postAppointment = asyncHandler(async (req, res, next) => {
   }
   const doctorId = isConflict[0]._id;
   const patientId = req.user._id;
-  console.log(req.user)
+  console.log(req.user);
   const appointment = await Appointment.create({
     firstName,
     lastName,
@@ -91,7 +91,6 @@ const getAllAppointments = asyncHandler(async (req, res, next) => {
   });
 });
 
-
 const updateAppointmentStatus = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
   let appointment = await Appointment.findById(id);
@@ -109,10 +108,8 @@ const updateAppointmentStatus = asyncHandler(async (req, res, next) => {
   });
 });
 
-
 const deleteAppointment = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
-  // console.log(id);
   console.log(`Delete appointment request received for ID: ${id}`);
   const appointment = await Appointment.findById(id);
   if (!appointment) {
@@ -125,27 +122,51 @@ const deleteAppointment = asyncHandler(async (req, res, next) => {
   });
 });
 
-// for making unpaid to paid in appointment , during payment integration
-const updateCheckStatus = asyncHandler(async (req, res, next) => {
+// Schedule video call — generates a unique Jitsi link and stores scheduled date/time
+const scheduleVideoCall = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
-  console.log(req.body)
+  const { scheduledDate, scheduledTime } = req.body;
   let appointment = await Appointment.findById(id);
   if (!appointment) {
-    return next(new ErrorHandler('Appointment not found!', 404));
+    return next(new ErrorHandler("Appointment not found!", 404));
+  }
+  // Simple alphanumeric room name — avoids Jitsi moderator/waiting screen issues
+  const roomName = `hmsconsult${id.toString().slice(-6)}${Date.now().toString().slice(-6)}`;
+  const videoCallLink = `https://meet.jit.si/${roomName}`;
+  appointment.videoCallLink = videoCallLink;
+  appointment.scheduledDate = scheduledDate;
+  appointment.scheduledTime = scheduledTime;
+  await appointment.save();
+  res.status(200).json({
+    success: true,
+    message: "Video call scheduled successfully!",
+    videoCallLink,
+    scheduledDate,
+    scheduledTime,
+  });
+});
+
+// for making unpaid to paid in appointment, during payment integration
+const updateCheckStatus = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+  console.log(req.body);
+  let appointment = await Appointment.findById(id);
+  if (!appointment) {
+    return next(new ErrorHandler("Appointment not found!", 404));
   }
   appointment.patientChecked = req.body.patientChecked;
   await appointment.save();
   res.status(200).json({
     success: true,
-    message: 'Patient is checked successfully',
+    message: "Patient is checked successfully",
   });
 });
-
 
 export {
   postAppointment,
   getAllAppointments,
   updateAppointmentStatus,
   deleteAppointment,
-  updateCheckStatus
+  updateCheckStatus,
+  scheduleVideoCall,
 };

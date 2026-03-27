@@ -27,6 +27,7 @@ import PatientHome from "./Pages/PatientHome";
 import Testapp from "./test/testapp";
 import Inventory from "./Pages/Inventory";
 import Billing from "./Pages/Billing";
+import VideoCall from "./Pages/VideoCall";
 
 const App = () => {
   const { isAuthenticated, setIsAuthenticated, setUser } =
@@ -76,6 +77,7 @@ const App = () => {
           <Route path="/testapp" element={<Testapp />} />
           <Route path="/inventory" element={<Inventory />} />
           <Route path="/billing" element={<Billing />} />
+          <Route path="/video-call" element={<VideoCall />} />
         </Routes>
         <ToastContainer position="top-center" />
       </Router>

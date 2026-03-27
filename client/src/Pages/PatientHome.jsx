@@ -12,9 +12,10 @@ const PatientHome = () => {
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [viewBillAppointment, setViewBillAppointment] = useState(null);
   const [payBillAppointment, setPayBillAppointment] = useState(null);
+  // Track which appointmentIds have a prescription submitted by doctor
+  const [prescriptionExists, setPrescriptionExists] = useState({});
   const navigateTo = useNavigate();
 
-  // ✅ FIX: Safe guard — if patient not in localStorage, redirect to login instead of crashing
   const patientRaw = localStorage.getItem("patient");
   if (!patientRaw) {
     navigateTo("/login");
@@ -37,6 +38,34 @@ const PatientHome = () => {
     };
     fetchAppointments();
   }, []);
+
+  // Once appointments load, check prescription existence for each Accepted appointment
+  useEffect(() => {
+    const checkPrescriptions = async () => {
+      const patAppts = appointments.filter(
+        (a) => a.patientId === _id && a.status === "Accepted"
+      );
+      const results = {};
+      await Promise.all(
+        patAppts.map(async (appt) => {
+          try {
+            await axios.get(
+              `http://localhost:8000/api/v1/prescription/getPrescribe/${appt._id}`,
+              { withCredentials: true }
+            );
+            results[appt._id] = true; // prescription exists
+          } catch {
+            results[appt._id] = false; // no prescription yet
+          }
+        })
+      );
+      setPrescriptionExists(results);
+    };
+
+    if (appointments.length > 0) {
+      checkPrescriptions();
+    }
+  }, [appointments]);
 
   const patAppointments = appointments.filter(
     (appointment) => appointment.patientId === _id
@@ -63,7 +92,7 @@ const PatientHome = () => {
   const handleClosePayBill = () => setPayBillAppointment(null);
 
   return (
-    <div className="w-full h-screen bg-gray-100">
+    <div className="w-full min-h-screen bg-gray-100">
       <Navbar />
       <div className="mt-20 pt-10 h-28 flex justify-around px-60">
         <div className="w-2/5 font-semibold text-3xl flex gap-5 items-center bg-white border border-black rounded-lg p-10 pt-20 pb-20">
@@ -81,111 +110,193 @@ const PatientHome = () => {
           Appointments Scheduled: {patAppointments.length}
         </div>
       </div>
-      <div className="pl-8 pr-8 mt-20 pt-5">
-        <h1 className="ml-10 font-semibold text-2xl">Appointment Details:</h1>
-        <table className="w-full mt-4 bg-white shadow-md rounded-lg">
-          <thead className="bg-[#FA7070] text-white">
-            <tr>
-              <th className="py-2 border-r border-gray-300">#</th>
-              <th className="py-2 border-r border-gray-300">Patient Name</th>
-              <th className="py-2 border-r border-gray-300">Appointment Date</th>
-              <th className="py-2 border-r border-gray-300">Appointment Status</th>
-              <th className="py-2 border-r border-gray-300">Doctor Name</th>
-              <th className="py-2 border-r border-gray-300">Doctor Department</th>
-              <th className="py-2 border-r border-gray-300">Prescription</th>
-              <th className="py-2 border-r border-gray-300">Billing & Payment</th>
-            </tr>
-          </thead>
-          <tbody>
-            {patAppointments.length > 0 ? (
-              patAppointments.map((appointment, index) => (
-                <tr key={appointment._id} className="border-b border-gray-200">
-                  <td className="py-2 pl-5 text-center font-bold rounded-l-lg border-r border-gray-300">{index + 1}</td>
-                  <td className="py-2 text-center font-bold border-r border-gray-300">
-                    {appointment.firstName} {appointment.lastName}
-                  </td>
-                  <td className="py-2 text-center font-bold border-r border-gray-300">
-                    {appointment.appointment_date.substring(0, 10)}
-                  </td>
-                  <td className="py-2 text-center font-bold border-r border-gray-300">{appointment.status}</td>
-                  <td className="py-2 text-center font-bold border-r border-gray-300">
-                    {appointment.doctor.firstName} {appointment.doctor.lastName}
-                  </td>
-                  <td className="py-2 text-center font-bold border-r border-gray-300">{appointment.department}</td>
-                  <td className="py-2 text-center font-bold rounded-r-lg flex justify-around">
-                    {appointment.status === "Pending" && (
-                      <button
-                        onClick={() => handleCancel(appointment._id)}
-                        className="bg-red-500 text-white px-4 py-2 rounded-full hover:bg-red-600 transition duration-300"
+
+      <div className="pl-8 pr-8 mt-20 pt-5 pb-10">
+        <h1 className="ml-10 font-semibold text-2xl mb-4">Appointment Details:</h1>
+        <div className="overflow-x-auto">
+          <table className="w-full bg-white shadow-md rounded-lg text-sm">
+            <thead className="bg-[#FA7070] text-white">
+              <tr>
+                <th className="py-2 px-3 border-r border-red-400 whitespace-nowrap">#</th>
+                <th className="py-2 px-3 border-r border-red-400 whitespace-nowrap">Patient Name</th>
+                <th className="py-2 px-3 border-r border-red-400 whitespace-nowrap">Appointment Date</th>
+                <th className="py-2 px-3 border-r border-red-400 whitespace-nowrap">Appointment Status</th>
+                <th className="py-2 px-3 border-r border-red-400 whitespace-nowrap">Doctor Name</th>
+                <th className="py-2 px-3 border-r border-red-400 whitespace-nowrap">Doctor Department</th>
+                <th className="py-2 px-3 border-r border-red-400 whitespace-nowrap">Scheduled Date</th>
+                <th className="py-2 px-3 border-r border-red-400 whitespace-nowrap">Scheduled Time</th>
+                <th className="py-2 px-3 border-r border-red-400 whitespace-nowrap">Video Call</th>
+                <th className="py-2 px-3 border-r border-red-400 whitespace-nowrap">Prescription</th>
+                <th className="py-2 px-3 whitespace-nowrap">Billing & Payment</th>
+              </tr>
+            </thead>
+            <tbody>
+              {patAppointments.length > 0 ? (
+                patAppointments.map((appointment, index) => (
+                  <tr key={appointment._id} className="border-b border-gray-200">
+                    {/* # */}
+                    <td className="py-2 px-3 text-center font-bold border-r border-gray-200">{index + 1}</td>
+
+                    {/* Patient Name */}
+                    <td className="py-2 px-3 text-center font-bold border-r border-gray-200 whitespace-nowrap">
+                      {appointment.firstName} {appointment.lastName}
+                    </td>
+
+                    {/* Appointment Date */}
+                    <td className="py-2 px-3 text-center font-bold border-r border-gray-200 whitespace-nowrap">
+                      {appointment.appointment_date.substring(0, 10)}
+                    </td>
+
+                    {/* Status */}
+                    <td className="py-2 px-3 text-center font-bold border-r border-gray-200">
+                      <span
+                        className={`px-3 py-1 rounded-full text-white text-xs ${
+                          appointment.status === "Accepted"
+                            ? "bg-green-500"
+                            : appointment.status === "Rejected"
+                            ? "bg-red-500"
+                            : "bg-yellow-400"
+                        }`}
                       >
-                        Cancel Appointment
-                      </button>
-                    )}
-                    {appointment.status === "Accepted" && (
-                      <button
-                        onClick={() => handleGetPrescription(appointment)}
-                        className="bg-green-500 text-white px-4 py-2 rounded-full hover:bg-green-600 transition duration-300"
-                      >
-                        Check Prescription
-                      </button>
-                    )}
-                    {appointment.status === "Rejected" && (
-                      <button
-                        className="bg-red-200 text-red-500 px-4 py-2 rounded-full cursor-not-allowed"
-                        disabled
-                      >
-                        Rejected by Doctor
-                      </button>
-                    )}
-                  </td>
-                  <td className="py-2 text-center font-bold border-r border-gray-300">
-                    {appointment.paymentStatus === "BillNotSend" && (
-                      <button className="bg-gray-400 text-white px-4 py-2 rounded-full cursor-not-allowed" disabled>
-                        Bill Not Available
-                      </button>
-                    )}
-                    {appointment.paymentStatus === "Unpaid" && (
-                      <div className="flex justify-around">
-                        <button
-                          onClick={() => handleViewBill(appointment)}
-                          className="bg-blue-500 text-white px-4 py-2 rounded-full hover:bg-blue-600 transition duration-300"
+                        {appointment.status}
+                      </span>
+                    </td>
+
+                    {/* Doctor Name */}
+                    <td className="py-2 px-3 text-center font-bold border-r border-gray-200 whitespace-nowrap">
+                      {appointment.doctor.firstName} {appointment.doctor.lastName}
+                    </td>
+
+                    {/* Doctor Department */}
+                    <td className="py-2 px-3 text-center font-bold border-r border-gray-200 whitespace-nowrap">
+                      {appointment.department}
+                    </td>
+
+                    {/* Scheduled Date */}
+                    <td className="py-2 px-3 text-center font-bold border-r border-gray-200 whitespace-nowrap">
+                      {appointment.scheduledDate ? (
+                        <span className="text-green-700">{appointment.scheduledDate}</span>
+                      ) : (
+                        <span className="text-gray-400 font-normal italic text-xs">Not Scheduled</span>
+                      )}
+                    </td>
+
+                    {/* Scheduled Time */}
+                    <td className="py-2 px-3 text-center font-bold border-r border-gray-200 whitespace-nowrap">
+                      {appointment.scheduledTime ? (
+                        <span className="text-green-700">{appointment.scheduledTime}</span>
+                      ) : (
+                        <span className="text-gray-400 font-normal italic text-xs">Not Scheduled</span>
+                      )}
+                    </td>
+
+                    {/* Video Call */}
+                    <td className="py-2 px-3 text-center font-bold border-r border-gray-200">
+                      {appointment.videoCallLink ? (
+                        <a
+                          href={`/video-call?room=${encodeURIComponent(appointment.videoCallLink)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-block bg-purple-600 hover:bg-purple-700 text-white px-4 py-1.5 rounded-full transition-all duration-300 text-xs whitespace-nowrap"
                         >
-                          View Bill
-                        </button>
+                          Join Video Call
+                        </a>
+                      ) : (
+                        <span className="text-gray-400 font-normal italic text-xs whitespace-nowrap">No Link Yet</span>
+                      )}
+                    </td>
+
+                    {/* Prescription */}
+                    <td className="py-2 px-3 text-center font-bold border-r border-gray-200">
+                      {appointment.status === "Pending" && (
                         <button
-                          onClick={() => handlePayBill(appointment)}
-                          className="bg-red-500 text-white px-4 py-2 rounded-full hover:bg-red-600 transition duration-300"
+                          onClick={() => handleCancel(appointment._id)}
+                          className="bg-red-500 text-white px-4 py-1.5 rounded-full hover:bg-red-600 transition duration-300 text-xs whitespace-nowrap"
                         >
-                          Pay Now
+                          Cancel Appointment
                         </button>
-                      </div>
-                    )}
-                    {appointment.paymentStatus === "Paid" && (
-                      <div className="flex justify-around">
+                      )}
+                      {appointment.status === "Accepted" && (
+                        prescriptionExists[appointment._id] === true ? (
+                          // Prescription submitted by doctor — allow viewing
+                          <button
+                            onClick={() => handleGetPrescription(appointment)}
+                            className="bg-green-500 text-white px-4 py-1.5 rounded-full hover:bg-green-600 transition duration-300 text-xs whitespace-nowrap"
+                          >
+                            Check Prescription
+                          </button>
+                        ) : (
+                          // No prescription yet — show disabled button
+                          <button
+                            disabled
+                            className="bg-gray-300 text-gray-500 px-4 py-1.5 rounded-full cursor-not-allowed text-xs whitespace-nowrap"
+                            title="Doctor has not submitted a prescription yet"
+                          >
+                            Not Prescribed Yet
+                          </button>
+                        )
+                      )}
+                      {appointment.status === "Rejected" && (
                         <button
-                          onClick={() => handleViewBill(appointment)}
-                          className="bg-blue-500 text-white px-4 py-2 rounded-full hover:bg-blue-600 transition duration-300"
+                          className="bg-red-200 text-red-500 px-4 py-1.5 rounded-full cursor-not-allowed text-xs whitespace-nowrap"
+                          disabled
                         >
-                          View Bill
+                          Rejected by Doctor
                         </button>
-                        <button className="bg-green-500 text-white px-4 py-2 rounded-full cursor-not-allowed" disabled>
-                          Paid
+                      )}
+                    </td>
+
+                    {/* Billing & Payment */}
+                    <td className="py-2 px-3 text-center font-bold">
+                      {appointment.paymentStatus === "BillNotSend" && (
+                        <button className="bg-gray-400 text-white px-4 py-1.5 rounded-full cursor-not-allowed text-xs whitespace-nowrap" disabled>
+                          Bill Not Available
                         </button>
-                      </div>
-                    )}
+                      )}
+                      {appointment.paymentStatus === "Unpaid" && (
+                        <div className="flex flex-col gap-2 items-center">
+                          <button
+                            onClick={() => handleViewBill(appointment)}
+                            className="bg-blue-500 text-white px-4 py-1.5 rounded-full hover:bg-blue-600 transition duration-300 text-xs whitespace-nowrap"
+                          >
+                            View Bill
+                          </button>
+                          <button
+                            onClick={() => handlePayBill(appointment)}
+                            className="bg-red-500 text-white px-4 py-1.5 rounded-full hover:bg-red-600 transition duration-300 text-xs whitespace-nowrap"
+                          >
+                            Pay Now
+                          </button>
+                        </div>
+                      )}
+                      {appointment.paymentStatus === "Paid" && (
+                        <div className="flex flex-col gap-2 items-center">
+                          <button
+                            onClick={() => handleViewBill(appointment)}
+                            className="bg-blue-500 text-white px-4 py-1.5 rounded-full hover:bg-blue-600 transition duration-300 text-xs whitespace-nowrap"
+                          >
+                            View Bill
+                          </button>
+                          <button className="bg-green-500 text-white px-4 py-1.5 rounded-full cursor-not-allowed text-xs whitespace-nowrap" disabled>
+                            Paid
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="11" className="py-4 text-center text-gray-500">
+                    No Appointments Scheduled
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="8" className="py-4 text-center text-gray-500">
-                  No Appointments Scheduled
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
+
       {selectedAppointment && (
         <Describe appointment={selectedAppointment} onClose={handleCloseDescribe} />
       )}

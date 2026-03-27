@@ -88,6 +88,18 @@ const appointmentSchema = new mongoose.Schema({
     enum: ['Unpaid', 'Paid', "BillNotSend"],
     default: 'BillNotSend',
   },
+  videoCallLink: {
+    type: String,
+    default: null,
+  },
+  scheduledDate: {
+    type: String,
+    default: null,
+  },
+  scheduledTime: {
+    type: String,
+    default: null,
+  },
 });
 
 export const Appointment = mongoose.model("Appointment", appointmentSchema);
