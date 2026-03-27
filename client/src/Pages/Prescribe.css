@@ -1,0 +1,98 @@
+.prescribe-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 1;
+    transition: opacity 0.3s ease-in-out;
+  }
+  
+  .prescribe-container {
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    transform: translateY(0);
+    transition: transform 0.3s ease-in-out;
+  }
+  
+  .prescribe-title {
+    font-size: 24px;
+    font-weight: bold;
+    color: #FA7070;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+  
+  .prescribe-details p {
+    margin: 10px 0;
+    font-size: 16px;
+  }
+  
+  .prescribe-details strong {
+    color: #333;
+  }
+  
+  .prescribe-section {
+    margin-top: 20px;
+  }
+  
+  .prescribe-subtitle {
+    font-size: 20px;
+    font-weight: bold;
+    color: #FA7070;
+    margin-bottom: 10px;
+  }
+  
+  .prescribe-textarea {
+    width: 100%;
+    height: 100px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    resize: none;
+    font-size: 14px;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+  }
+  
+  .submit-button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 25px;
+    font-size: 16px;
+    cursor: pointer;
+    display: block;
+    margin: 20px auto 0;
+  }
+  
+  .submit-button:hover {
+    background-color: #45a049;
+  }
+  
+  .close-button {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #333;
+  }
+  
+  .close-button:hover {
+    color: #FA7070;
+  }
+  

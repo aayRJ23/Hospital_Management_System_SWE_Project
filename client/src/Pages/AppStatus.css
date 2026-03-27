@@ -1,0 +1,22 @@
+.value-pending {
+    background-color: #ffcc00;
+    color: #fff;
+  }
+  
+  .value-accepted {
+    background-color: #00cc66;
+    color: #fff;
+  }
+  
+  .value-rejected {
+    background-color: #ff3300;
+    color: #fff;
+  }
+  
+  .green {
+    color: #00ff1a;
+  }
+  
+  .red {
+    color: #ff0000;
+  }
