@@ -30,10 +30,10 @@ const PatientHome = () => {
       try {
         const { data } = await axios.get(
           "http://localhost:8000/api/v1/appointments/getall",
-          { withCredentials: true }
+          { withCredentials: true },
         );
         setAppointments(data.appointments);
-      } catch (error) {
+      } catch {
         setAppointments([]);
       }
     };
@@ -43,7 +43,7 @@ const PatientHome = () => {
   useEffect(() => {
     const checkPrescriptions = async () => {
       const patAppts = appointments.filter(
-        (a) => a.patientId === _id && a.status === "Accepted"
+        (a) => a.patientId === _id && a.status === "Accepted",
       );
       const results = {};
       await Promise.all(
@@ -51,40 +51,48 @@ const PatientHome = () => {
           try {
             await axios.get(
               `http://localhost:8000/api/v1/prescribe/getPrescribe/${appt._id}`,
-              { withCredentials: true }
+              { withCredentials: true },
             );
             results[appt._id] = true;
           } catch {
             results[appt._id] = false;
           }
-        })
+        }),
       );
       setPrescriptionExists(results);
     };
-
-    if (appointments.length > 0) {
-      checkPrescriptions();
-    }
+    if (appointments.length > 0) checkPrescriptions();
   }, [appointments]);
 
-  const patAppointments = appointments.filter(
-    (appointment) => appointment.patientId === _id
-  );
+  const patAppointments = appointments.filter((a) => a.patientId === _id);
+  const acceptedCount = patAppointments.filter(
+    (a) => a.status === "Accepted",
+  ).length;
+  const pendingCount = patAppointments.filter(
+    (a) => a.status === "Pending",
+  ).length;
+  const rejectedCount = patAppointments.filter(
+    (a) => a.status === "Rejected",
+  ).length;
+  const paidCount = patAppointments.filter(
+    (a) => a.paymentStatus === "Paid",
+  ).length;
 
   const handleCancel = async (id) => {
     try {
       await axios.delete(
         `http://localhost:8000/api/v1/appointments/delete/${id}`,
-        { withCredentials: true }
+        { withCredentials: true },
       );
       setAppointments(appointments.filter((appt) => appt._id !== id));
       toast.success("Appointment cancelled successfully");
-    } catch (error) {
+    } catch {
       toast.error("Failed to cancel the appointment");
     }
   };
 
-  const handleGetPrescription = (appointment) => setSelectedAppointment(appointment);
+  const handleGetPrescription = (appointment) =>
+    setSelectedAppointment(appointment);
   const handleViewBill = (appointment) => setViewBillAppointment(appointment);
   const handlePayBill = (appointment) => setPayBillAppointment(appointment);
   const handleCloseDescribe = () => setSelectedAppointment(null);
@@ -94,53 +102,113 @@ const PatientHome = () => {
   return (
     <div className="w-full min-h-screen bg-gray-100">
       <Navbar />
-
-      {/* ── Notification Bell fixed top-right ── */}
       <div className="fixed top-4 right-4 z-50">
         <NotificationBell />
       </div>
 
-      <div className="mt-20 pt-10 h-28 flex justify-around px-60">
+      {/* Profile + Stats section — same layout as before */}
+      <div className="mt-20 pt-10 flex justify-around px-60 gap-6 flex-wrap">
+        {/* Profile card — unchanged */}
         <div className="w-2/5 font-semibold text-3xl flex gap-5 items-center bg-white border border-black rounded-lg p-10 pt-20 pb-20">
           <div className="h-full flex flex-col justify-center text-sm">
             <h1 className="text-2xl">Hi, {firstName + " " + lastName}</h1>
-            <p><strong>Email:</strong> {email}</p>
-            <p><strong>Phone:</strong> {phone}</p>
-            <p><strong>Gender: </strong>{gender}</p>
-            <p><strong>NIC:</strong> {nic}</p>
-            <p><strong>DOB:</strong> {dob}</p>
-            <p><strong>Patient ID: </strong>{_id}</p>
+            <p>
+              <strong>Email:</strong> {email}
+            </p>
+            <p>
+              <strong>Phone:</strong> {phone}
+            </p>
+            <p>
+              <strong>Gender: </strong>
+              {gender}
+            </p>
+            <p>
+              <strong>NIC:</strong> {nic}
+            </p>
+            <p>
+              <strong>DOB:</strong> {dob}
+            </p>
+            <p>
+              <strong>Patient ID: </strong>
+              {_id}
+            </p>
           </div>
         </div>
-        <div className="w-1/3 flex h-full bg-[#FA7070] px-4 font-semibold text-2xl rounded-3xl items-center justify-center text-white">
-          Appointments Scheduled: {patAppointments.length}
+
+        {/* Stats cards — same format as the existing total count card */}
+        <div className="flex flex-col gap-3 justify-center">
+          <div className="bg-[#FA7070] px-4 py-4 font-semibold text-xl rounded-3xl flex items-center justify-center text-white min-w-[220px]">
+            Total Appointments: {patAppointments.length}
+          </div>
+          <div className="bg-green-500 px-4 py-4 font-semibold text-xl rounded-3xl flex items-center justify-center text-white">
+            Accepted: {acceptedCount}
+          </div>
+          <div className="bg-yellow-400 px-4 py-4 font-semibold text-xl rounded-3xl flex items-center justify-center text-white">
+            Pending: {pendingCount}
+          </div>
+          <div className="bg-red-600 px-4 py-4 font-semibold text-xl rounded-3xl flex items-center justify-center text-white">
+            Rejected: {rejectedCount}
+          </div>
+          <div className="bg-emerald-600 px-4 py-4 font-semibold text-xl rounded-3xl flex items-center justify-center text-white">
+            Bills Paid: {paidCount}
+          </div>
         </div>
       </div>
 
+      {/* Table — completely unchanged from original */}
       <div className="pl-8 pr-8 mt-20 pt-5 pb-10">
-        <h1 className="ml-10 font-semibold text-2xl mb-4">Appointment Details:</h1>
+        <h1 className="ml-10 font-semibold text-2xl mb-4">
+          Appointment Details:
+        </h1>
         <div className="overflow-x-auto">
           <table className="w-full bg-white shadow-md rounded-lg text-sm">
             <thead className="bg-[#FA7070] text-white">
               <tr>
-                <th className="py-2 px-3 border-r border-red-400 whitespace-nowrap">#</th>
-                <th className="py-2 px-3 border-r border-red-400 whitespace-nowrap">Patient Name</th>
-                <th className="py-2 px-3 border-r border-red-400 whitespace-nowrap">Appointment Date</th>
-                <th className="py-2 px-3 border-r border-red-400 whitespace-nowrap">Appointment Status</th>
-                <th className="py-2 px-3 border-r border-red-400 whitespace-nowrap">Doctor Name</th>
-                <th className="py-2 px-3 border-r border-red-400 whitespace-nowrap">Doctor Department</th>
-                <th className="py-2 px-3 border-r border-red-400 whitespace-nowrap">Scheduled Date</th>
-                <th className="py-2 px-3 border-r border-red-400 whitespace-nowrap">Scheduled Time</th>
-                <th className="py-2 px-3 border-r border-red-400 whitespace-nowrap">Video Call</th>
-                <th className="py-2 px-3 border-r border-red-400 whitespace-nowrap">Prescription</th>
-                <th className="py-2 px-3 whitespace-nowrap">Billing & Payment</th>
+                <th className="py-2 px-3 border-r border-red-400 whitespace-nowrap">
+                  #
+                </th>
+                <th className="py-2 px-3 border-r border-red-400 whitespace-nowrap">
+                  Patient Name
+                </th>
+                <th className="py-2 px-3 border-r border-red-400 whitespace-nowrap">
+                  Appointment Date
+                </th>
+                <th className="py-2 px-3 border-r border-red-400 whitespace-nowrap">
+                  Appointment Status
+                </th>
+                <th className="py-2 px-3 border-r border-red-400 whitespace-nowrap">
+                  Doctor Name
+                </th>
+                <th className="py-2 px-3 border-r border-red-400 whitespace-nowrap">
+                  Doctor Department
+                </th>
+                <th className="py-2 px-3 border-r border-red-400 whitespace-nowrap">
+                  Scheduled Date
+                </th>
+                <th className="py-2 px-3 border-r border-red-400 whitespace-nowrap">
+                  Scheduled Time
+                </th>
+                <th className="py-2 px-3 border-r border-red-400 whitespace-nowrap">
+                  Video Call
+                </th>
+                <th className="py-2 px-3 border-r border-red-400 whitespace-nowrap">
+                  Prescription
+                </th>
+                <th className="py-2 px-3 whitespace-nowrap">
+                  Billing & Payment
+                </th>
               </tr>
             </thead>
             <tbody>
               {patAppointments.length > 0 ? (
                 patAppointments.map((appointment, index) => (
-                  <tr key={appointment._id} className="border-b border-gray-200">
-                    <td className="py-2 px-3 text-center font-bold border-r border-gray-200">{index + 1}</td>
+                  <tr
+                    key={appointment._id}
+                    className="border-b border-gray-200"
+                  >
+                    <td className="py-2 px-3 text-center font-bold border-r border-gray-200">
+                      {index + 1}
+                    </td>
                     <td className="py-2 px-3 text-center font-bold border-r border-gray-200 whitespace-nowrap">
                       {appointment.firstName} {appointment.lastName}
                     </td>
@@ -149,35 +217,38 @@ const PatientHome = () => {
                     </td>
                     <td className="py-2 px-3 text-center font-bold border-r border-gray-200">
                       <span
-                        className={`px-3 py-1 rounded-full text-white text-xs ${
-                          appointment.status === "Accepted"
-                            ? "bg-green-500"
-                            : appointment.status === "Rejected"
-                            ? "bg-red-500"
-                            : "bg-yellow-400"
-                        }`}
+                        className={`px-3 py-1 rounded-full text-white text-xs ${appointment.status === "Accepted" ? "bg-green-500" : appointment.status === "Rejected" ? "bg-red-500" : "bg-yellow-400"}`}
                       >
                         {appointment.status}
                       </span>
                     </td>
                     <td className="py-2 px-3 text-center font-bold border-r border-gray-200 whitespace-nowrap">
-                      {appointment.doctor.firstName} {appointment.doctor.lastName}
+                      {appointment.doctor.firstName}{" "}
+                      {appointment.doctor.lastName}
                     </td>
                     <td className="py-2 px-3 text-center font-bold border-r border-gray-200 whitespace-nowrap">
                       {appointment.department}
                     </td>
                     <td className="py-2 px-3 text-center font-bold border-r border-gray-200 whitespace-nowrap">
                       {appointment.scheduledDate ? (
-                        <span className="text-green-700">{appointment.scheduledDate}</span>
+                        <span className="text-green-700">
+                          {appointment.scheduledDate}
+                        </span>
                       ) : (
-                        <span className="text-gray-400 font-normal italic text-xs">Not Scheduled</span>
+                        <span className="text-gray-400 font-normal italic text-xs">
+                          Not Scheduled
+                        </span>
                       )}
                     </td>
                     <td className="py-2 px-3 text-center font-bold border-r border-gray-200 whitespace-nowrap">
                       {appointment.scheduledTime ? (
-                        <span className="text-green-700">{appointment.scheduledTime}</span>
+                        <span className="text-green-700">
+                          {appointment.scheduledTime}
+                        </span>
                       ) : (
-                        <span className="text-gray-400 font-normal italic text-xs">Not Scheduled</span>
+                        <span className="text-gray-400 font-normal italic text-xs">
+                          Not Scheduled
+                        </span>
                       )}
                     </td>
                     <td className="py-2 px-3 text-center font-bold border-r border-gray-200">
@@ -191,7 +262,9 @@ const PatientHome = () => {
                           Join Video Call
                         </a>
                       ) : (
-                        <span className="text-gray-400 font-normal italic text-xs whitespace-nowrap">No Link Yet</span>
+                        <span className="text-gray-400 font-normal italic text-xs whitespace-nowrap">
+                          No Link Yet
+                        </span>
                       )}
                     </td>
                     <td className="py-2 px-3 text-center font-bold border-r border-gray-200">
@@ -203,8 +276,8 @@ const PatientHome = () => {
                           Cancel Appointment
                         </button>
                       )}
-                      {appointment.status === "Accepted" && (
-                        prescriptionExists[appointment._id] === true ? (
+                      {appointment.status === "Accepted" &&
+                        (prescriptionExists[appointment._id] === true ? (
                           <button
                             onClick={() => handleGetPrescription(appointment)}
                             className="bg-green-500 text-white px-4 py-1.5 rounded-full hover:bg-green-600 transition duration-300 text-xs whitespace-nowrap"
@@ -219,12 +292,11 @@ const PatientHome = () => {
                           >
                             Not Prescribed Yet
                           </button>
-                        )
-                      )}
+                        ))}
                       {appointment.status === "Rejected" && (
                         <button
-                          className="bg-red-200 text-red-500 px-4 py-1.5 rounded-full cursor-not-allowed text-xs whitespace-nowrap"
                           disabled
+                          className="bg-red-200 text-red-500 px-4 py-1.5 rounded-full cursor-not-allowed text-xs whitespace-nowrap"
                         >
                           Rejected by Doctor
                         </button>
@@ -232,7 +304,10 @@ const PatientHome = () => {
                     </td>
                     <td className="py-2 px-3 text-center font-bold">
                       {appointment.paymentStatus === "BillNotSend" && (
-                        <button className="bg-gray-400 text-white px-4 py-1.5 rounded-full cursor-not-allowed text-xs whitespace-nowrap" disabled>
+                        <button
+                          disabled
+                          className="bg-gray-400 text-white px-4 py-1.5 rounded-full cursor-not-allowed text-xs whitespace-nowrap"
+                        >
                           Bill Not Available
                         </button>
                       )}
@@ -260,7 +335,10 @@ const PatientHome = () => {
                           >
                             View Bill
                           </button>
-                          <button className="bg-green-500 text-white px-4 py-1.5 rounded-full cursor-not-allowed text-xs whitespace-nowrap" disabled>
+                          <button
+                            disabled
+                            className="bg-green-500 text-white px-4 py-1.5 rounded-full cursor-not-allowed text-xs whitespace-nowrap"
+                          >
                             Paid
                           </button>
                         </div>
@@ -281,13 +359,22 @@ const PatientHome = () => {
       </div>
 
       {selectedAppointment && (
-        <Describe appointment={selectedAppointment} onClose={handleCloseDescribe} />
+        <Describe
+          appointment={selectedAppointment}
+          onClose={handleCloseDescribe}
+        />
       )}
       {viewBillAppointment && (
-        <ReceiveBill appointment={viewBillAppointment} closePopup={handleCloseViewBill} />
+        <ReceiveBill
+          appointment={viewBillAppointment}
+          closePopup={handleCloseViewBill}
+        />
       )}
       {payBillAppointment && (
-        <PayBillPortal appointment={payBillAppointment} closePopup={handleClosePayBill} />
+        <PayBillPortal
+          appointment={payBillAppointment}
+          closePopup={handleClosePayBill}
+        />
       )}
     </div>
   );

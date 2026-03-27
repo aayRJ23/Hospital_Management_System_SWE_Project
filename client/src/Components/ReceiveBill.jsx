@@ -1,100 +1,278 @@
 import axios from "axios";
 import { useState, useEffect } from "react";
-import { toast } from "react-toastify";
-import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 
 const ReceiveBill = ({ closePopup, appointment }) => {
   const [billData, setBillData] = useState(null);
 
   useEffect(() => {
-    // Function to fetch the bill data
     const fetchBillData = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:8000/api/v1/bill/getBill/${appointment._id}`
+          `http://localhost:8000/api/v1/bill/${appointment._id}`,
+          { withCredentials: true },
         );
-
-        // Log the entire response object to understand its structure
-        console.log("Response object:", response);
-
-        // Check the structure of response.data
-        const data = response.data;
-        console.log("Response data:", data);
-
         if (response.status === 200) {
-          setBillData(data);
-        } else {
-          console.error("Bill not found");
+          setBillData(response.data);
         }
       } catch (error) {
         console.error("Error fetching bill: ", error);
       }
     };
-
     fetchBillData();
   }, [appointment._id]);
 
   const downloadBill = () => {
-    const input = document.getElementById("bill-content");
+    if (!billData) return;
 
-    html2canvas(input, { scale: 2, useCORS: true })
-      .then((canvas) => {
-        const imgData = canvas.toDataURL("image/png");
+    const doc = new jsPDF({ unit: "mm", format: "a4" });
+    const W = 210;
+    const margin = 15;
+    const contentW = W - margin * 2;
+    let y = 0;
 
-        // Create a new canvas with padding and border
-        const margin = 40; // Margin in pixels
-        const borderWidth = 4; // Border width in pixels
-        const outputCanvas = document.createElement("canvas");
-        const context = outputCanvas.getContext("2d");
+    const extraCharges = billData.extraCharges || [];
+    const extraTotal = extraCharges.reduce(
+      (s, c) => s + Number(c.cost || 0),
+      0,
+    );
 
-        outputCanvas.width = canvas.width + margin * 2;
-        outputCanvas.height = canvas.height + margin * 2;
+    // Header band
+    doc.setFillColor(220, 38, 38);
+    doc.rect(0, 0, W, 38, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(26);
+    doc.text("MedEazy", W / 2, 15, { align: "center" });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text(
+      "123 Health St, Wellness City  |  Phone: (123) 456-7890",
+      W / 2,
+      22,
+      { align: "center" },
+    );
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(margin, 27, 35, 8, 4, 4, "F");
+    doc.setTextColor(220, 38, 38);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.text("INVOICE", margin + 17.5, 32.5, { align: "center" });
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.text(`Date: ${new Date().toLocaleDateString()}`, W - margin, 32.5, {
+      align: "right",
+    });
 
-        // Fill background with white
-        context.fillStyle = "#FFFFFF";
-        context.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
+    y = 46;
 
-        // Draw the captured image onto the new canvas with margin
-        context.drawImage(canvas, margin, margin);
+    const sectionHeader = (label, yPos) => {
+      doc.setFillColor(254, 242, 242);
+      doc.rect(margin, yPos, contentW, 8, "F");
+      doc.setDrawColor(220, 38, 38);
+      doc.setLineWidth(0.4);
+      doc.line(margin, yPos + 8, margin + contentW, yPos + 8);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(220, 38, 38);
+      doc.text(label, margin + 3, yPos + 5.5);
+      return yPos + 12;
+    };
 
-        // Draw the border
-        context.lineWidth = borderWidth;
-        context.strokeStyle = "#000000";
-        context.strokeRect(
-          margin / 2,
-          margin / 2,
-          outputCanvas.width - margin,
-          outputCanvas.height - margin
-        );
+    const row = (label, value, yPos) => {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(80, 80, 80);
+      doc.text(label, margin + 3, yPos);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(30, 30, 30);
+      doc.text(String(value ?? ""), margin + contentW / 2, yPos);
+      return yPos + 6;
+    };
 
-        const outputImgData = outputCanvas.toDataURL("image/png");
+    const twoColRow = (l1, v1, l2, v2, yPos) => {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(80, 80, 80);
+      doc.text(l1, margin + 3, yPos);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(30, 30, 30);
+      doc.text(String(v1 ?? ""), margin + 45, yPos);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(80, 80, 80);
+      doc.text(l2, margin + contentW / 2 + 3, yPos);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(30, 30, 30);
+      doc.text(String(v2 ?? ""), margin + contentW / 2 + 45, yPos);
+      return yPos + 6;
+    };
 
-        // Create a link element, set it to download the image
-        const link = document.createElement("a");
-        link.href = outputImgData;
-        link.download = `bill_${billData.patientName}_${billData.appointmentId}.png`;
+    // Appointment Info
+    y = sectionHeader("Appointment Information", y);
+    y = twoColRow(
+      "Appointment ID:",
+      appointment._id.substring(0, 18) + "...",
+      "Appointment Date:",
+      appointment.appointment_date.substring(0, 10),
+      y,
+    );
+    y = twoColRow(
+      "Billing Date:",
+      billData.billingDate || new Date().toLocaleDateString(),
+      "Department:",
+      billData.department,
+      y,
+    );
+    y += 2;
 
-        // Append the link to the document, trigger a click, and remove it
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      })
-      .catch((error) => {
-        console.error("Error generating PNG: ", error);
+    // Doctor Info
+    y = sectionHeader("Doctor Details", y);
+    y = row("Doctor ID:", billData.doctorId, y);
+    y = twoColRow(
+      "Doctor Name:",
+      billData.doctorName,
+      "Department:",
+      billData.department,
+      y,
+    );
+    y += 2;
+
+    // Patient Info
+    y = sectionHeader("Patient Details", y);
+    y = twoColRow(
+      "Patient Name:",
+      billData.patientName,
+      "Patient ID:",
+      String(billData.patientId).substring(0, 16) + "...",
+      y,
+    );
+    y = twoColRow(
+      "Email:",
+      billData.patientEmail,
+      "Phone:",
+      billData.patientPhone,
+      y,
+    );
+    y = twoColRow(
+      "Date of Birth:",
+      billData.dob,
+      "Gender:",
+      billData.gender,
+      y,
+    );
+    y = twoColRow("Aadhar No.:", billData.nic, "Address:", billData.address, y);
+    y += 4;
+
+    // Fee Table
+    y = sectionHeader("Fee Breakdown", y);
+    const tableX = margin;
+    const col1W = contentW * 0.65;
+    const col2W = contentW * 0.35;
+
+    doc.setFillColor(220, 38, 38);
+    doc.rect(tableX, y, contentW, 7, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.text("Description", tableX + 3, y + 5);
+    doc.text("Amount", tableX + col1W + col2W / 2, y + 5, { align: "center" });
+    y += 7;
+
+    const feeRow = (desc, amount, shade) => {
+      if (shade) {
+        doc.setFillColor(254, 242, 242);
+        doc.rect(tableX, y, contentW, 6.5, "F");
+      }
+      doc.setTextColor(30, 30, 30);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.text(desc, tableX + 3, y + 4.5);
+      doc.text(`Rs. ${amount}`, tableX + col1W + col2W / 2, y + 4.5, {
+        align: "center",
       });
+      y += 6.5;
+    };
+
+    feeRow(
+      "Doctor's Consultation Fee",
+      Number(billData.consultationFee).toFixed(2),
+      false,
+    );
+    extraCharges.forEach((c, i) => {
+      feeRow(c.purpose, Number(c.cost).toFixed(2), i % 2 === 0);
+    });
+    feeRow(
+      "GST (18%)",
+      Number(billData.GST).toFixed(2),
+      extraCharges.length % 2 === 0,
+    );
+
+    // Total
+    doc.setFillColor(30, 30, 30);
+    doc.rect(tableX, y, contentW, 8, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text("TOTAL AMOUNT", tableX + 3, y + 5.5);
+    doc.text(
+      `Rs. ${Number(billData.totalAmount).toFixed(2)}`,
+      tableX + col1W + col2W / 2,
+      y + 5.5,
+      { align: "center" },
+    );
+    y += 12;
+
+    // Payment status badge
+    const isPaid =
+      billData.paymentStatus === "Paid" || appointment.paymentStatus === "Paid";
+    doc.setFillColor(...(isPaid ? [22, 163, 74] : [239, 68, 68]));
+    doc.roundedRect(margin, y, 40, 8, 4, 4, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.text(isPaid ? "PAID" : "UNPAID", margin + 20, y + 5.5, {
+      align: "center",
+    });
+    y += 14;
+
+    // Footer
+    doc.setDrawColor(220, 38, 38);
+    doc.setLineWidth(0.5);
+    doc.line(margin, y, margin + contentW, y);
+    y += 6;
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9);
+    doc.setTextColor(120, 120, 120);
+    doc.text("Wishing you a speedy recovery and a healthy life.", W / 2, y, {
+      align: "center",
+    });
+    y += 5;
+    doc.setFontSize(8);
+    doc.text(
+      "This is a computer-generated document. No signature required.",
+      W / 2,
+      y,
+      { align: "center" },
+    );
+
+    doc.save(`Bill_${billData.patientName}_${appointment._id}.pdf`);
   };
 
   if (!billData) {
-    return <div>Loading...</div>;
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+        <div className="bg-white p-10 rounded-lg shadow-lg text-center">
+          <p className="text-gray-500 text-lg">Loading bill...</p>
+        </div>
+      </div>
+    );
   }
 
   const {
     consultationFee,
-    convenienceCharge,
     GST,
     totalAmount,
-    appointmentDate,
-    billingDate,
     doctorName,
     department,
     patientName,
@@ -105,6 +283,7 @@ const ReceiveBill = ({ closePopup, appointment }) => {
     nic,
     gender,
     address,
+    extraCharges = [],
   } = billData;
 
   return (
@@ -120,9 +299,9 @@ const ReceiveBill = ({ closePopup, appointment }) => {
           className="absolute top-4 left-4 text-xl font-bold text-blue-600"
           onClick={downloadBill}
         >
-          Download Bill
+          Download Bill (PDF)
         </button>
-        <div id="bill-content">
+        <div id="bill-content" className="mt-10">
           <div className="text-center mb-4">
             <h1 className="text-4xl font-bold mb-1">MedEazy</h1>
             <p className="font-bold">123 Health St, Wellness City</p>
@@ -149,7 +328,7 @@ const ReceiveBill = ({ closePopup, appointment }) => {
                 {new Date().toLocaleDateString()}
               </p>
             </div>
-            <div className="my-4"></div> {/* Slight gap */}
+            <div className="my-4"></div>
             <div className="flex justify-between">
               <p>
                 <strong>Doctor's ID:</strong> {appointment.doctorId}
@@ -166,7 +345,7 @@ const ReceiveBill = ({ closePopup, appointment }) => {
                 <strong>Doctor's Department:</strong> {appointment.department}
               </p>
             </div>
-            <div className="my-4"></div> {/* Slight gap */}
+            <div className="my-4"></div>
             <h3 className="text-xl font-bold text-red-500">Patient Details</h3>
             <div className="space-y-2">
               <p className="text-lg">
@@ -205,26 +384,28 @@ const ReceiveBill = ({ closePopup, appointment }) => {
               <p>
                 <strong>Doctor's Consultation Fee:</strong>
               </p>
-              <p>₹{consultationFee}</p>
+              <p>₹{Number(consultationFee).toFixed(2)}</p>
             </div>
-            <div className="flex justify-between">
-              <p>
-                <strong>Convenience Charge:</strong>
-              </p>
-              <p>₹{convenienceCharge}</p>
-            </div>
+            {extraCharges.map((c, i) => (
+              <div key={i} className="flex justify-between">
+                <p>
+                  <strong>{c.purpose}:</strong>
+                </p>
+                <p>₹{Number(c.cost).toFixed(2)}</p>
+              </div>
+            ))}
             <div className="flex justify-between">
               <p>
                 <strong>GST (18%):</strong>
               </p>
-              <p>₹{GST}</p>
+              <p>₹{Number(GST).toFixed(2)}</p>
             </div>
             <hr className="my-2" />
             <div className="flex justify-between">
               <p className="font-bold">
                 <strong>Total Amount:</strong>
               </p>
-              <p className="font-bold">₹{totalAmount}</p>
+              <p className="font-bold">₹{Number(totalAmount).toFixed(2)}</p>
             </div>
             <hr className="my-4" />
             <div className="text-center">

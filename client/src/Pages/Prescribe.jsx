@@ -1,141 +1,125 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { toast } from "react-toastify";
+
+const FIELDS = [
+  { key: "remarks", label: "Remarks", icon: "📋", placeholder: "Enter clinical remarks, observations..." },
+  { key: "prescription", label: "Prescription", icon: "💊", placeholder: "Enter prescribed medicines, dosage, duration..." },
+  { key: "medicineRecommendation", label: "Medicine Recommendation", icon: "🧴", placeholder: "Enter OTC suggestions or additional medicine notes..." },
+  { key: "testReferral", label: "Test Referrals", icon: "🔬", placeholder: "Enter lab tests, imaging referrals..." },
+  { key: "additionalNote", label: "Additional Notes", icon: "📝", placeholder: "Any other notes or follow-up instructions..." },
+];
 
 const Prescribe = ({ appointment, onClose }) => {
-  const [remarks, setRemarks] = useState("");
-  const [prescription, setPrescription] = useState("");
-  const [medicineRecommendation, setMedicineRecommendation] = useState("");
-  const [testReferral, setTestReferral] = useState("");
-  const [additionalNote, setAdditionalNote] = useState("");
+  const [form, setForm] = useState({ remarks: "", prescription: "", medicineRecommendation: "", testReferral: "", additionalNote: "" });
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Fetch the last saved state if it exists
-    const fetchPrescription = async (id) => {
+    const fetchPrescription = async () => {
       try {
-        const response = await axios.get(`http://localhost:8000/api/v1/prescribe/getPrescribe/${id}`);
+        const response = await axios.get(`http://localhost:8000/api/v1/prescribe/getPrescribe/${appointment._id}`);
         if (response.data) {
-          setRemarks(response.data.remarks);
-          setPrescription(response.data.prescription);
-          setMedicineRecommendation(response.data.medicineRecommendation);
-          setTestReferral(response.data.testReferral);
-          setAdditionalNote(response.data.additionalNote);
+          setForm({
+            remarks: response.data.remarks || "",
+            prescription: response.data.prescription || "",
+            medicineRecommendation: response.data.medicineRecommendation || "",
+            testReferral: response.data.testReferral || "",
+            additionalNote: response.data.additionalNote || "",
+          });
         }
-      } catch (error) {
-        console.error("Error fetching prescription data:", error);
-      }
+      } catch { /* not yet created, start blank */ }
     };
-
-    fetchPrescription(appointment._id);
+    fetchPrescription();
   }, [appointment._id]);
 
   const handleSubmit = async () => {
-    const data = {
-      appointmentId: appointment._id,
-      remarks,
-      prescription,
-      medicineRecommendation,
-      testReferral,
-      additionalNote,
-    };
-  
+    setLoading(true);
     try {
-      const response = await axios.post(`http://localhost:8000/api/v1/prescribe/postPrescribe`, data);
-      console.log("Response:", response.data); // Log the response for debugging
-      toast.success('Prescription sent successfully');
+      await axios.post("http://localhost:8000/api/v1/prescribe/postPrescribe", {
+        appointmentId: appointment._id, ...form,
+      });
+      toast.success("Prescription saved successfully");
       onClose();
     } catch (error) {
-      console.error("Error submitting prescription data:", error.response ? error.response.data : error.message);
-      toast.error('Error occurred while sending prescription');
-      // Handle error (e.g., show an error message)
+      toast.error("Error saving prescription");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-      <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-3xl max-h-screen overflow-y-auto relative border-4 border-gray-800">
-        <button className="absolute top-4 right-4 text-2xl font-bold text-gray-600" onClick={onClose}>
-          ×
-        </button>
-        
-        <h2 className="text-2xl font-bold text-red-500 mb-4 text-center">Appointment Details</h2>
-        <div className="space-y-4">
-          <p><strong>Appointment Date:</strong> {appointment.appointment_date.substring(0, 10)}</p>
-          <p><strong>Department:</strong> {appointment.department}</p>
-          <p><strong>Status:</strong> {appointment.status}</p>
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4">
+      <div className="bg-white w-full max-w-3xl max-h-[95vh] overflow-y-auto rounded-2xl shadow-2xl border border-gray-100">
+
+        {/* Header */}
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-red-600 to-red-500 rounded-t-2xl px-8 py-5 flex items-center justify-between">
+          <div>
+            <h2 className="text-white font-bold text-2xl">📋 Prescription</h2>
+            <p className="text-red-100 text-sm mt-0.5">Doctor's editable view</p>
+          </div>
+          <button onClick={onClose} className="text-white hover:bg-white/20 rounded-full w-9 h-9 flex items-center justify-center text-2xl font-bold transition">×</button>
         </div>
-        <hr className="my-4" />
-        
-        <h2 className="text-2xl font-bold text-red-500 mb-4 text-center">Patient's Details</h2>
-        <div className="space-y-4">
-          <p><strong>Name:</strong> {appointment.firstName} {appointment.lastName}</p>
-          <p><strong>Email:</strong> {appointment.email}</p>
-          <p><strong>Phone:</strong> {appointment.phone}</p>
-          <p><strong>NIC:</strong> {appointment.nic}</p>
-          <p><strong>DOB:</strong> {appointment.dob.substring(0, 10)}</p>
-          <p><strong>Gender:</strong> {appointment.gender}</p>
-          <p><strong>Address:</strong> {appointment.address}</p>
-          <p><strong>Patient ID:</strong> {appointment.patientId}</p>
+
+        <div className="px-8 py-6 space-y-5">
+          {/* Appointment Info Card */}
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 grid grid-cols-2 gap-2 text-sm">
+            <p><span className="font-semibold text-red-700">Appointment Date:</span> {appointment.appointment_date.substring(0, 10)}</p>
+            <p><span className="font-semibold text-red-700">Department:</span> {appointment.department}</p>
+            <p><span className="font-semibold text-red-700">Status:</span>
+              <span className={`ml-1 px-2 py-0.5 rounded-full text-white text-xs ${appointment.status === "Accepted" ? "bg-green-500" : "bg-yellow-400"}`}>{appointment.status}</span>
+            </p>
+          </div>
+
+          {/* Patient Info Card */}
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm">
+            <h3 className="font-bold text-gray-700 mb-2 text-base">🧑 Patient Details</h3>
+            <div className="grid grid-cols-2 gap-x-8 gap-y-1">
+              <p><span className="font-semibold">Name:</span> {appointment.firstName} {appointment.lastName}</p>
+              <p><span className="font-semibold">Email:</span> {appointment.email}</p>
+              <p><span className="font-semibold">Phone:</span> {appointment.phone}</p>
+              <p><span className="font-semibold">Gender:</span> {appointment.gender}</p>
+              <p><span className="font-semibold">DOB:</span> {appointment.dob.substring(0, 10)}</p>
+              <p><span className="font-semibold">NIC:</span> {appointment.nic}</p>
+              <p className="col-span-2"><span className="font-semibold">Address:</span> {appointment.address}</p>
+              <p className="col-span-2"><span className="font-semibold">Patient ID:</span> {appointment.patientId}</p>
+            </div>
+          </div>
+
+          {/* Editable Fields */}
+          {FIELDS.map(({ key, label, icon, placeholder }) => (
+            <div key={key}>
+              <label className="flex items-center gap-2 font-bold text-gray-700 mb-2">
+                <span>{icon}</span> {label}
+              </label>
+              <textarea
+                className="w-full h-28 p-3 border border-gray-300 rounded-xl resize-y focus:outline-none focus:ring-2 focus:ring-red-400 text-sm bg-white transition"
+                placeholder={placeholder}
+                value={form[key]}
+                onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+              />
+            </div>
+          ))}
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-2 pb-4">
+            <button
+              onClick={onClose}
+              className="flex-1 border border-gray-300 text-gray-600 py-2.5 rounded-full hover:bg-gray-100 transition font-semibold"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="flex-1 bg-green-500 hover:bg-green-600 disabled:opacity-60 text-white py-2.5 rounded-full transition font-semibold"
+            >
+              {loading ? "Saving..." : "✅ Submit Prescription"}
+            </button>
+          </div>
         </div>
-        <hr className="my-4" />
-        
-        <div className="mt-6">
-          <h3 className="text-xl font-bold text-red-500 mb-2">Remarks</h3>
-          <textarea
-            className="w-full h-32 p-2 border border-gray-300 rounded-md resize-y"
-            placeholder="Enter remarks here..."
-            value={remarks}
-            onChange={(e) => setRemarks(e.target.value)}
-          ></textarea>
-        </div>
-        <div className="mt-6">
-          <h3 className="text-xl font-bold text-red-500 mb-2">Prescription</h3>
-          <textarea
-            className="w-full h-32 p-2 border border-gray-300 rounded-md resize-y"
-            placeholder="Enter prescription details here..."
-            value={prescription}
-            onChange={(e) => setPrescription(e.target.value)}
-          ></textarea>
-        </div>
-        <div className="mt-6">
-          <h3 className="text-xl font-bold text-red-500 mb-2">Medicine Recommendation</h3>
-          <textarea
-            className="w-full h-32 p-2 border border-gray-300 rounded-md resize-y"
-            placeholder="Enter medicine recommendation here..."
-            value={medicineRecommendation}
-            onChange={(e) => setMedicineRecommendation(e.target.value)}
-          ></textarea>
-        </div>
-        <div className="mt-6">
-          <h3 className="text-xl font-bold text-red-500 mb-2">Test Referrals</h3>
-          <textarea
-            className="w-full h-32 p-2 border border-gray-300 rounded-md resize-y"
-            placeholder="Enter test referrals here..."
-            value={testReferral}
-            onChange={(e) => setTestReferral(e.target.value)}
-          ></textarea>
-        </div>
-        <div className="mt-6">
-          <h3 className="text-xl font-bold text-red-500 mb-2">Additional Notes</h3>
-          <textarea
-            className="w-full h-32 p-2 border border-gray-300 rounded-md resize-y"
-            placeholder="Enter additional notes here..."
-            value={additionalNote}
-            onChange={(e) => setAdditionalNote(e.target.value)}
-          ></textarea>
-        </div>
-        <button
-          className="mt-6 bg-green-500 text-white py-2 px-4 rounded-full hover:bg-green-600"
-          onClick={handleSubmit}
-        >
-          Submit Prescription
-        </button>
-        <ToastContainer />
       </div>
     </div>
   );
-  
 };
 
 export default Prescribe;

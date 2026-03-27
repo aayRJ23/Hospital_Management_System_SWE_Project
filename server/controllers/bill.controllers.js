@@ -1,26 +1,40 @@
-// server/controllers/bill.controllers.js
 import { Bill } from "../models/bill.model.js";
 import { Appointment } from "../models/appointment.model.js";
 import { User } from "../models/user.model.js";
 import { createAndSendNotification } from "./notification.controllers.js";
 
-// ─── Helper: get all admin IDs ────────────────────────────────────────────────
 const getAdminIds = async () => {
   const admins = await User.find({ role: "Admin" }).select("_id");
   return admins.map((a) => a._id);
 };
 
-// ─── Create Bill (Admin generates bill) ──────────────────────────────────────
 export const createBill = async (req, res) => {
   const {
-    appointmentId, appointmentDate, billingDate, doctorId, doctorName,
-    department, patientName, patientId, email, dob, phone, nic,
-    gender, address, consultationFee, convenienceCharge, gst, total,
+    appointmentId,
+    appointmentDate,
+    billingDate,
+    doctorId,
+    doctorName,
+    department,
+    patientName,
+    patientId,
+    email,
+    dob,
+    phone,
+    nic,
+    gender,
+    address,
+    consultationFee,
+    convenienceCharge,
+    extraCharges,
+    gst,
+    total,
   } = req.body;
 
   try {
     const appointment = await Appointment.findById(appointmentId);
-    if (!appointment) return res.status(404).json({ message: "Appointment not found" });
+    if (!appointment)
+      return res.status(404).json({ message: "Appointment not found" });
 
     const patient = await User.findById(patientId);
     if (!patient) return res.status(404).json({ message: "Patient not found" });
@@ -29,17 +43,29 @@ export const createBill = async (req, res) => {
     if (!doctor) return res.status(404).json({ message: "Doctor not found" });
 
     const bill = new Bill({
-      appointmentId, patientId, patientName,
-      patientEmail: email, patientPhone: phone,
-      doctorId, doctorName, appointmentDate, department,
-      consultationFee, convenienceFee: convenienceCharge,
-      GST: gst, totalAmount: total, billingDate,
-      address, dob, nic, gender,
+      appointmentId,
+      patientId,
+      patientName,
+      patientEmail: email,
+      patientPhone: phone,
+      doctorId,
+      doctorName,
+      appointmentDate,
+      department,
+      consultationFee,
+      convenienceCharge: convenienceCharge || 0,
+      extraCharges: extraCharges || [],
+      GST: gst,
+      totalAmount: total,
+      billingDate,
+      address,
+      dob,
+      nic,
+      gender,
     });
 
     await bill.save();
 
-    // Update appointment payment status
     appointment.paymentStatus = "Unpaid";
     await appointment.save();
 
@@ -56,7 +82,6 @@ export const createBill = async (req, res) => {
       billingDate,
     };
 
-    // → Notify Patient: bill has been generated
     await createAndSendNotification({
       recipientId: patientId,
       recipientRole: "Patient",
@@ -73,7 +98,6 @@ export const createBill = async (req, res) => {
   }
 };
 
-// ─── Get Bill by Appointment ID ───────────────────────────────────────────────
 export const getBillByAppointmentId = async (req, res) => {
   const { appointmentId } = req.params;
   try {
@@ -86,7 +110,6 @@ export const getBillByAppointmentId = async (req, res) => {
   }
 };
 
-// ─── Get All Bills ────────────────────────────────────────────────────────────
 export const getAllBills = async (req, res) => {
   try {
     const bills = await Bill.find().populate("patientId").populate("doctorId");
@@ -97,7 +120,6 @@ export const getAllBills = async (req, res) => {
   }
 };
 
-// ─── Mark Bill as Paid (called when patient pays) ────────────────────────────
 export const markBillAsPaid = async (req, res) => {
   const { billId } = req.params;
   try {
@@ -107,7 +129,6 @@ export const markBillAsPaid = async (req, res) => {
     bill.paymentStatus = "Paid";
     await bill.save();
 
-    // Also update appointment
     const appointment = await Appointment.findById(bill.appointmentId);
     if (appointment) {
       appointment.paymentStatus = "Paid";
@@ -126,7 +147,6 @@ export const markBillAsPaid = async (req, res) => {
       totalAmount: bill.totalAmount,
     };
 
-    // → Notify Admins
     const adminIds = await getAdminIds();
     for (const adminId of adminIds) {
       await createAndSendNotification({
@@ -139,7 +159,6 @@ export const markBillAsPaid = async (req, res) => {
       });
     }
 
-    // → Notify Doctor
     await createAndSendNotification({
       recipientId: bill.doctorId,
       recipientRole: "Doctor",
