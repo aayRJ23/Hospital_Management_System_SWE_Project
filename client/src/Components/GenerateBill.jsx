@@ -5,39 +5,30 @@ import html2canvas from "html2canvas";
 
 const GenerateBill = ({ closePopup, appointment }) => {
   const [consultationFee, setConsultationFee] = useState(0);
+  const [billSent, setBillSent] = useState(
+    appointment.paymentStatus !== "BillNotSend"
+  );
   const convenienceCharge = 60;
   const gst = ((consultationFee + convenienceCharge) * 18) / 100;
   const total = consultationFee + convenienceCharge + gst;
 
   useEffect(() => {
-    // Function to fetch the doctor's consultation fee
     const fetchConsultationFee = async () => {
       try {
-        // Fetch all doctors from the new endpoint
         const response = await axios.get(
           "http://localhost:8000/api/v1/users/doctors"
         );
 
-        // Log the entire response object to understand its structure
-        console.log("Response object:", response);
-
-        // Check the structure of response.data
         const data = response.data;
-        console.log("Response data:", data);
 
-        // Extract the array of doctors
         if (data && data.success && Array.isArray(data.data)) {
           const doctorsArray = data.data;
-          console.log("Doctors array:", doctorsArray);
 
-          // Find the doctor with the matching ID
           const doctor = doctorsArray.find(
             (doc) => doc._id === appointment.doctorId
           );
-          console.log(doctor);
           if (doctor) {
             setConsultationFee(doctor.doctorConsultationFee);
-            console.log(doctor.doctorConsultationFee);
           } else {
             console.error("Doctor not found");
           }
@@ -61,23 +52,19 @@ const GenerateBill = ({ closePopup, appointment }) => {
       .then((canvas) => {
         const imgData = canvas.toDataURL("image/png");
 
-        // Create a new canvas with padding and border
-        const margin = 40; // Margin in pixels
-        const borderWidth = 4; // Border width in pixels
+        const margin = 40;
+        const borderWidth = 4;
         const outputCanvas = document.createElement("canvas");
         const context = outputCanvas.getContext("2d");
 
         outputCanvas.width = canvas.width + margin * 2;
         outputCanvas.height = canvas.height + margin * 2;
 
-        // Fill background with white
         context.fillStyle = "#FFFFFF";
         context.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
 
-        // Draw the captured image onto the new canvas with margin
         context.drawImage(canvas, margin, margin);
 
-        // Draw the border
         context.lineWidth = borderWidth;
         context.strokeStyle = "#000000";
         context.strokeRect(
@@ -89,12 +76,10 @@ const GenerateBill = ({ closePopup, appointment }) => {
 
         const outputImgData = outputCanvas.toDataURL("image/png");
 
-        // Create a link element, set it to download the image
         const link = document.createElement("a");
         link.href = outputImgData;
         link.download = `bill_${appointment.firstName}_${appointment.lastName}__${appointment._id}.png`;
 
-        // Append the link to the document, trigger a click, and remove it
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -128,10 +113,12 @@ const GenerateBill = ({ closePopup, appointment }) => {
 
     try {
       const response = await axios.post(
-        "http://localhost:8000/api/v1/bill/createBill",
-        billData
+        "http://localhost:8000/api/v1/bill/create",  // ✅ fixed URL
+        billData,
+        { withCredentials: true }                    // ✅ send admin cookie
       );
       toast.success("Bill sent successfully");
+      setBillSent(true);                             // ✅ mark as sent
       console.log("Bill sent successfully:", response.data);
     } catch (error) {
       toast.error("Error sending bill");
@@ -154,7 +141,16 @@ const GenerateBill = ({ closePopup, appointment }) => {
         >
           Download Bill
         </button>
-        {appointment.paymentStatus === "BillNotSend" && (
+
+        {/* Send Bill / Bill Sent button */}
+        {billSent ? (
+          <button
+            className="absolute top-16 left-4 text-xl font-bold text-gray-400 cursor-not-allowed"
+            disabled
+          >
+            Bill Sent ✓
+          </button>
+        ) : (
           <button
             className="absolute top-16 left-4 text-xl font-bold text-green-600"
             onClick={sendBill}
@@ -162,6 +158,7 @@ const GenerateBill = ({ closePopup, appointment }) => {
             Send Bill
           </button>
         )}
+
         <div id="bill-content">
           <div className="text-center mb-4">
             <h1 className="text-4xl font-bold mb-1">MedEazy</h1>
@@ -189,7 +186,7 @@ const GenerateBill = ({ closePopup, appointment }) => {
                 {new Date().toLocaleDateString()}
               </p>
             </div>
-            <div className="my-4"></div> {/* Slight gap */}
+            <div className="my-4"></div>
             <div className="flex justify-between">
               <p>
                 <strong>Doctor's ID:</strong> {appointment.doctorId}
@@ -206,7 +203,7 @@ const GenerateBill = ({ closePopup, appointment }) => {
                 <strong>Doctor's Department:</strong> {appointment.department}
               </p>
             </div>
-            <div className="my-4"></div> {/* Slight gap */}
+            <div className="my-4"></div>
             <h3 className="text-xl font-bold text-red-500">Patient Details</h3>
             <div className="space-y-2">
               <p className="text-lg">

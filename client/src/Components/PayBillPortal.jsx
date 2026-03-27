@@ -35,12 +35,28 @@ const PayBillPortal = ({ appointment, closePopup }) => {
   const handleOtpSubmit = async () => {
     setLoading(true);
     setTimeout(async () => {
-      await axios.put(`http://localhost:8000/api/v1/appointments/update/${appointment._id}`, {
-        paymentStatus: 'Paid'
-      });
-      setPaymentStatus('Paid');
-      setLoading(false);
-      setStep('success');
+      try {
+        // Step 1: Fetch the bill document for this appointment
+        const billRes = await axios.get(
+          `http://localhost:8000/api/v1/bill/${appointment._id}`,
+          { withCredentials: true }
+        );
+        const billId = billRes.data._id;
+
+        // Step 2: Mark the bill as paid — triggers BILL_PAID notifications to Admin + Doctor
+        await axios.put(
+          `http://localhost:8000/api/v1/bill/pay/${billId}`,
+          {},
+          { withCredentials: true }
+        );
+
+        setPaymentStatus('Paid');
+        setStep('success');
+      } catch (err) {
+        console.error('Payment failed:', err);
+      } finally {
+        setLoading(false);
+      }
     }, 3000);
   };
 
