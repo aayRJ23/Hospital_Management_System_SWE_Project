@@ -10,6 +10,10 @@ const GenerateBill = ({ closePopup, appointment }) => {
   );
   const [showEditPopup, setShowEditPopup] = useState(false);
 
+  // ── Saved bill data fetched from DB (used when bill already sent) ──
+  const [savedBill, setSavedBill] = useState(null);
+  const [loadingSavedBill, setLoadingSavedBill] = useState(false);
+
   // Extra charges: each item { purpose, cost }
   const [extraCharges, setExtraCharges] = useState([
     { purpose: "Convenience Charge", cost: 60 },
@@ -23,25 +27,51 @@ const GenerateBill = ({ closePopup, appointment }) => {
   const gst = ((consultationFee + extraTotal) * 18) / 100;
   const total = consultationFee + extraTotal + gst;
 
+  // ── Fetch saved bill from DB whenever bill is already sent ──────────
   useEffect(() => {
-    const fetchConsultationFee = async () => {
-      try {
-        const response = await axios.get(
-          "http://localhost:8000/api/v1/users/doctors",
-        );
-        const data = response.data;
-        if (data && data.success && Array.isArray(data.data)) {
-          const doctor = data.data.find(
-            (doc) => doc._id === appointment.doctorId,
+    if (billSent) {
+      const fetchSavedBill = async () => {
+        setLoadingSavedBill(true);
+        try {
+          const response = await axios.get(
+            `http://localhost:8000/api/v1/bill/${appointment._id}`,
+            { withCredentials: true },
           );
-          if (doctor) setConsultationFee(doctor.doctorConsultationFee);
+          if (response.status === 200) {
+            setSavedBill(response.data);
+          }
+        } catch (error) {
+          console.error("Error fetching saved bill:", error);
+        } finally {
+          setLoadingSavedBill(false);
         }
-      } catch (error) {
-        console.error("Error fetching consultation fee: ", error);
-      }
-    };
-    fetchConsultationFee();
-  }, [appointment.doctorId]);
+      };
+      fetchSavedBill();
+    }
+  }, [billSent, appointment._id]);
+
+  // ── Fetch consultation fee (used only when generating a new bill) ───
+  useEffect(() => {
+    if (!billSent) {
+      const fetchConsultationFee = async () => {
+        try {
+          const response = await axios.get(
+            "http://localhost:8000/api/v1/users/doctors",
+          );
+          const data = response.data;
+          if (data && data.success && Array.isArray(data.data)) {
+            const doctor = data.data.find(
+              (doc) => doc._id === appointment.doctorId,
+            );
+            if (doctor) setConsultationFee(doctor.doctorConsultationFee);
+          }
+        } catch (error) {
+          console.error("Error fetching consultation fee: ", error);
+        }
+      };
+      fetchConsultationFee();
+    }
+  }, [appointment.doctorId, billSent]);
 
   // Open edit popup — clone current extra charges into editRows
   const openEdit = () => {
@@ -66,14 +96,13 @@ const GenerateBill = ({ closePopup, appointment }) => {
   };
 
   const saveEdit = () => {
-    // Filter out rows without both fields
     const valid = editRows.filter((r) => r.purpose.trim() && r.cost !== "");
     setExtraCharges(valid);
     setShowEditPopup(false);
   };
 
-  // ── shared PDF builder (used by both admin download & patient ReceiveBill) ──
-  const buildPDF = ({ extraChargesData, consultationFeeData }) => {
+  // ── PDF builder for the NEW (unsent) bill using local state ─────────
+  const buildNewBillPDF = ({ extraChargesData, consultationFeeData }) => {
     const doc = new jsPDF({ unit: "mm", format: "a4" });
     const W = 210;
     const margin = 15;
@@ -164,7 +193,6 @@ const GenerateBill = ({ closePopup, appointment }) => {
       return yPos + 6;
     };
 
-    // Appointment Info
     y = sectionHeader("Appointment Information", y);
     y = twoColRow(
       "Appointment ID:",
@@ -182,7 +210,6 @@ const GenerateBill = ({ closePopup, appointment }) => {
     );
     y += 2;
 
-    // Doctor Info
     y = sectionHeader("Doctor Details", y);
     y = row("Doctor ID:", appointment.doctorId, y);
     y = twoColRow(
@@ -194,7 +221,6 @@ const GenerateBill = ({ closePopup, appointment }) => {
     );
     y += 2;
 
-    // Patient Info
     y = sectionHeader("Patient Details", y);
     y = twoColRow(
       "Patient Name:",
@@ -220,7 +246,6 @@ const GenerateBill = ({ closePopup, appointment }) => {
     );
     y += 4;
 
-    // Fee Table
     y = sectionHeader("Fee Breakdown", y);
     const tableX = margin;
     const col1W = contentW * 0.65;
@@ -256,7 +281,6 @@ const GenerateBill = ({ closePopup, appointment }) => {
     });
     feeRow("GST (18%)", gstLocal.toFixed(2), extraChargesData.length % 2 === 0);
 
-    // Total row
     doc.setFillColor(30, 30, 30);
     doc.rect(tableX, y, contentW, 8, "F");
     doc.setTextColor(255, 255, 255);
@@ -271,7 +295,6 @@ const GenerateBill = ({ closePopup, appointment }) => {
     );
     y += 12;
 
-    // Payment Status badge
     const statusColor =
       appointment.paymentStatus === "Paid" ? [22, 163, 74] : [239, 68, 68];
     doc.setFillColor(...statusColor);
@@ -288,7 +311,6 @@ const GenerateBill = ({ closePopup, appointment }) => {
     doc.text(statusLabel, margin + 20, y + 5.5, { align: "center" });
     y += 14;
 
-    // Footer
     doc.setDrawColor(220, 38, 38);
     doc.setLineWidth(0.5);
     doc.line(margin, y, margin + contentW, y);
@@ -311,14 +333,232 @@ const GenerateBill = ({ closePopup, appointment }) => {
     return doc;
   };
 
-  const downloadBill = () => {
-    const doc = buildPDF({
-      extraChargesData: extraCharges,
-      consultationFeeData: consultationFee,
-    });
-    doc.save(
-      `Bill_${appointment.firstName}_${appointment.lastName}_${appointment._id}.pdf`,
+  // ── PDF builder for the SAVED bill fetched from DB ──────────────────
+  const buildSavedBillPDF = (bill) => {
+    const doc = new jsPDF({ unit: "mm", format: "a4" });
+    const W = 210;
+    const margin = 15;
+    const contentW = W - margin * 2;
+    let y = 0;
+
+    const extraChargesData = bill.extraCharges || [];
+
+    // Header band
+    doc.setFillColor(220, 38, 38);
+    doc.rect(0, 0, W, 38, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(26);
+    doc.text("MedEazy", W / 2, 15, { align: "center" });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text(
+      "123 Health St, Wellness City  |  Phone: (123) 456-7890",
+      W / 2,
+      22,
+      { align: "center" },
     );
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(margin, 27, 35, 8, 4, 4, "F");
+    doc.setTextColor(220, 38, 38);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.text("INVOICE", margin + 17.5, 32.5, { align: "center" });
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.text(`Date: ${new Date().toLocaleDateString()}`, W - margin, 32.5, {
+      align: "right",
+    });
+
+    y = 46;
+
+    const sectionHeader = (label, yPos) => {
+      doc.setFillColor(254, 242, 242);
+      doc.rect(margin, yPos, contentW, 8, "F");
+      doc.setDrawColor(220, 38, 38);
+      doc.setLineWidth(0.4);
+      doc.line(margin, yPos + 8, margin + contentW, yPos + 8);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(220, 38, 38);
+      doc.text(label, margin + 3, yPos + 5.5);
+      return yPos + 12;
+    };
+
+    const row = (label, value, yPos) => {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(80, 80, 80);
+      doc.text(label, margin + 3, yPos);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(30, 30, 30);
+      doc.text(String(value ?? ""), margin + contentW / 2, yPos);
+      return yPos + 6;
+    };
+
+    const twoColRow = (l1, v1, l2, v2, yPos) => {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(80, 80, 80);
+      doc.text(l1, margin + 3, yPos);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(30, 30, 30);
+      doc.text(String(v1 ?? ""), margin + 45, yPos);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(80, 80, 80);
+      doc.text(l2, margin + contentW / 2 + 3, yPos);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(30, 30, 30);
+      doc.text(String(v2 ?? ""), margin + contentW / 2 + 45, yPos);
+      return yPos + 6;
+    };
+
+    y = sectionHeader("Appointment Information", y);
+    y = twoColRow(
+      "Appointment ID:",
+      appointment._id.substring(0, 18) + "...",
+      "Appointment Date:",
+      appointment.appointment_date.substring(0, 10),
+      y,
+    );
+    y = twoColRow(
+      "Billing Date:",
+      bill.billingDate || new Date().toLocaleDateString(),
+      "Department:",
+      bill.department,
+      y,
+    );
+    y += 2;
+
+    y = sectionHeader("Doctor Details", y);
+    y = row("Doctor ID:", String(bill.doctorId), y);
+    y = twoColRow(
+      "Doctor Name:",
+      bill.doctorName,
+      "Department:",
+      bill.department,
+      y,
+    );
+    y += 2;
+
+    y = sectionHeader("Patient Details", y);
+    y = twoColRow(
+      "Patient Name:",
+      bill.patientName,
+      "Patient ID:",
+      String(bill.patientId).substring(0, 16) + "...",
+      y,
+    );
+    y = twoColRow("Email:", bill.patientEmail, "Phone:", bill.patientPhone, y);
+    y = twoColRow("Date of Birth:", bill.dob, "Gender:", bill.gender, y);
+    y = twoColRow("Aadhar No.:", bill.nic, "Address:", bill.address, y);
+    y += 4;
+
+    y = sectionHeader("Fee Breakdown", y);
+    const tableX = margin;
+    const col1W = contentW * 0.65;
+    const col2W = contentW * 0.35;
+
+    doc.setFillColor(220, 38, 38);
+    doc.rect(tableX, y, contentW, 7, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.text("Description", tableX + 3, y + 5);
+    doc.text("Amount", tableX + col1W + col2W / 2, y + 5, { align: "center" });
+    y += 7;
+
+    const feeRow = (desc, amount, shade) => {
+      if (shade) {
+        doc.setFillColor(254, 242, 242);
+        doc.rect(tableX, y, contentW, 6.5, "F");
+      }
+      doc.setTextColor(30, 30, 30);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.text(desc, tableX + 3, y + 4.5);
+      doc.text(`Rs. ${amount}`, tableX + col1W + col2W / 2, y + 4.5, {
+        align: "center",
+      });
+      y += 6.5;
+    };
+
+    feeRow(
+      "Doctor's Consultation Fee",
+      Number(bill.consultationFee).toFixed(2),
+      false,
+    );
+    extraChargesData.forEach((c, i) => {
+      feeRow(c.purpose, Number(c.cost).toFixed(2), i % 2 === 0);
+    });
+    feeRow(
+      "GST (18%)",
+      Number(bill.GST).toFixed(2),
+      extraChargesData.length % 2 === 0,
+    );
+
+    doc.setFillColor(30, 30, 30);
+    doc.rect(tableX, y, contentW, 8, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text("TOTAL AMOUNT", tableX + 3, y + 5.5);
+    doc.text(
+      `Rs. ${Number(bill.totalAmount).toFixed(2)}`,
+      tableX + col1W + col2W / 2,
+      y + 5.5,
+      { align: "center" },
+    );
+    y += 12;
+
+    const isPaid = appointment.paymentStatus === "Paid";
+    doc.setFillColor(...(isPaid ? [22, 163, 74] : [239, 68, 68]));
+    doc.roundedRect(margin, y, 40, 8, 4, 4, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.text(isPaid ? "PAID" : "UNPAID", margin + 20, y + 5.5, {
+      align: "center",
+    });
+    y += 14;
+
+    doc.setDrawColor(220, 38, 38);
+    doc.setLineWidth(0.5);
+    doc.line(margin, y, margin + contentW, y);
+    y += 6;
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9);
+    doc.setTextColor(120, 120, 120);
+    doc.text("Wishing you a speedy recovery and a healthy life.", W / 2, y, {
+      align: "center",
+    });
+    y += 5;
+    doc.setFontSize(8);
+    doc.text(
+      "This is a computer-generated document. No signature required.",
+      W / 2,
+      y,
+      { align: "center" },
+    );
+
+    return doc;
+  };
+
+  // ── Download: use savedBill if bill already sent, else local state ───
+  const downloadBill = () => {
+    if (billSent && savedBill) {
+      const doc = buildSavedBillPDF(savedBill);
+      doc.save(`Bill_${savedBill.patientName}_${appointment._id}.pdf`);
+    } else {
+      const doc = buildNewBillPDF({
+        extraChargesData: extraCharges,
+        consultationFeeData: consultationFee,
+      });
+      doc.save(
+        `Bill_${appointment.firstName}_${appointment.lastName}_${appointment._id}.pdf`,
+      );
+    }
   };
 
   const sendBill = async () => {
@@ -347,58 +587,57 @@ const GenerateBill = ({ closePopup, appointment }) => {
       total: total.toFixed(2),
     };
     try {
-      await axios.post("http://localhost:8000/api/v1/bill/create", billData, {
-        withCredentials: true,
-      });
+      const response = await axios.post(
+        "http://localhost:8000/api/v1/bill/create",
+        billData,
+        { withCredentials: true },
+      );
       toast.success("Bill sent successfully");
       setBillSent(true);
+      setSavedBill(response.data.bill); // store the newly created bill immediately
     } catch (error) {
       toast.error("Error sending bill");
       console.error("Error sending bill:", error);
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-      <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-3xl max-h-screen overflow-y-auto relative border-4 border-gray-800">
-        <button
-          className="absolute top-4 right-4 text-2xl font-bold text-gray-600"
-          onClick={closePopup}
-        >
-          ×
-        </button>
-        <button
-          className="absolute top-4 left-4 text-xl font-bold text-blue-600"
-          onClick={downloadBill}
-        >
-          Download Bill (PDF)
-        </button>
+  // ── Render the bill content area ────────────────────────────────────
+  // If bill already sent, show saved bill from DB; otherwise show live local state
+  const renderBillContent = () => {
+    if (billSent) {
+      if (loadingSavedBill) {
+        return (
+          <div className="mt-16 text-center text-gray-400 py-10">
+            Loading bill...
+          </div>
+        );
+      }
+      if (!savedBill) {
+        return (
+          <div className="mt-16 text-center text-red-400 py-10">
+            Failed to load bill data.
+          </div>
+        );
+      }
+      const {
+        consultationFee: savedFee,
+        GST: savedGst,
+        totalAmount,
+        doctorName,
+        department,
+        patientName,
+        patientId,
+        patientEmail,
+        dob,
+        patientPhone,
+        nic,
+        gender,
+        address,
+        extraCharges: savedExtras = [],
+        billingDate,
+      } = savedBill;
 
-        {/* Send Bill / Edit Bill buttons */}
-        <div className="absolute top-14 left-4 flex flex-col gap-1">
-          {billSent ? (
-            <span className="text-sm font-bold text-gray-400 cursor-not-allowed">
-              Bill Sent ✓
-            </span>
-          ) : (
-            <>
-              <button
-                className="text-sm font-bold text-green-600 hover:text-green-800 text-left"
-                onClick={sendBill}
-              >
-                Send Bill
-              </button>
-              <button
-                className="text-sm font-bold text-orange-500 hover:text-orange-700 text-left"
-                onClick={openEdit}
-              >
-                ✏️ Edit Charges
-              </button>
-            </>
-          )}
-        </div>
-
-        {/* Bill Preview */}
+      return (
         <div id="bill-content" className="mt-16">
           <div className="text-center mb-4">
             <h1 className="text-4xl font-bold mb-1">MedEazy</h1>
@@ -423,71 +662,62 @@ const GenerateBill = ({ closePopup, appointment }) => {
             <div className="flex justify-between">
               <p>
                 <strong>Date of Billing:</strong>{" "}
-                {new Date().toLocaleDateString()}
+                {billingDate || new Date().toLocaleDateString()}
               </p>
             </div>
             <div className="my-4"></div>
             <div className="flex justify-between">
               <p>
-                <strong>Doctor's ID:</strong> {appointment.doctorId}
+                <strong>Doctor's Name:</strong> {doctorName}
               </p>
             </div>
             <div className="flex justify-between">
               <p>
-                <strong>Doctor's Name:</strong> {appointment.doctor.firstName}{" "}
-                {appointment.doctor.lastName}
-              </p>
-            </div>
-            <div className="flex justify-between">
-              <p>
-                <strong>Doctor's Department:</strong> {appointment.department}
+                <strong>Doctor's Department:</strong> {department}
               </p>
             </div>
             <div className="my-4"></div>
             <h3 className="text-xl font-bold text-red-500">Patient Details</h3>
             <div className="space-y-2">
               <p className="text-lg">
-                <strong>Name:</strong> {appointment.firstName}{" "}
-                {appointment.lastName}
+                <strong>Name:</strong> {patientName}
               </p>
               <div className="flex justify-between mr-9">
                 <p>
-                  <strong>Patient ID:</strong> {appointment.patientId}
+                  <strong>Patient ID:</strong> {patientId}
                 </p>
                 <p>
-                  <strong>Email:</strong> {appointment.email}
+                  <strong>Email:</strong> {patientEmail}
                 </p>
               </div>
               <div className="flex justify-between pr-14 mr-10">
                 <p>
-                  <strong>DOB:</strong> {appointment.dob.substring(0, 10)}
+                  <strong>DOB:</strong> {dob}
                 </p>
                 <p>
-                  <strong>Phone:</strong> {appointment.phone}
+                  <strong>Phone:</strong> {patientPhone}
                 </p>
               </div>
               <div className="flex justify-between pr-14 mr-24">
                 <p>
-                  <strong>Aadhar No.:</strong> {appointment.nic}
+                  <strong>Aadhar No.:</strong> {nic}
                 </p>
                 <p>
-                  <strong>Gender:</strong> {appointment.gender}
+                  <strong>Gender:</strong> {gender}
                 </p>
               </div>
               <p>
-                <strong>Address:</strong> {appointment.address}
+                <strong>Address:</strong> {address}
               </p>
             </div>
             <hr className="my-4" />
-
-            {/* Fee rows — live updated */}
             <div className="flex justify-between">
               <p>
                 <strong>Doctor's Consultation Fee:</strong>
               </p>
-              <p>₹{consultationFee}</p>
+              <p>₹{Number(savedFee).toFixed(2)}</p>
             </div>
-            {extraCharges.map((c, i) => (
+            {savedExtras.map((c, i) => (
               <div key={i} className="flex justify-between">
                 <p>
                   <strong>{c.purpose}:</strong>
@@ -499,14 +729,14 @@ const GenerateBill = ({ closePopup, appointment }) => {
               <p>
                 <strong>GST (18%):</strong>
               </p>
-              <p>₹{gst.toFixed(2)}</p>
+              <p>₹{Number(savedGst).toFixed(2)}</p>
             </div>
             <hr className="my-2" />
             <div className="flex justify-between">
               <p className="font-bold">
                 <strong>Total Amount:</strong>
               </p>
-              <p className="font-bold">₹{total.toFixed(2)}</p>
+              <p className="font-bold">₹{Number(totalAmount).toFixed(2)}</p>
             </div>
             <hr className="my-4" />
             <div className="text-center">
@@ -516,6 +746,168 @@ const GenerateBill = ({ closePopup, appointment }) => {
             </div>
           </div>
         </div>
+      );
+    }
+
+    // Bill not yet sent — show live local-state bill
+    return (
+      <div id="bill-content" className="mt-16">
+        <div className="text-center mb-4">
+          <h1 className="text-4xl font-bold mb-1">MedEazy</h1>
+          <p className="font-bold">123 Health St, Wellness City</p>
+          <p className="font-bold">Phone: (123) 456-7890</p>
+        </div>
+        <hr className="my-4" />
+        <h2 className="text-2xl font-bold text-red-500 mb-4 text-center">
+          Billing Details
+        </h2>
+        <hr className="my-4" />
+        <div className="space-y-4">
+          <div className="flex justify-between">
+            <p>
+              <strong>Appointment ID:</strong> {appointment._id}
+            </p>
+            <p>
+              <strong>Appointment Date:</strong>{" "}
+              {appointment.appointment_date.substring(0, 10)}
+            </p>
+          </div>
+          <div className="flex justify-between">
+            <p>
+              <strong>Date of Billing:</strong>{" "}
+              {new Date().toLocaleDateString()}
+            </p>
+          </div>
+          <div className="my-4"></div>
+          <div className="flex justify-between">
+            <p>
+              <strong>Doctor's ID:</strong> {appointment.doctorId}
+            </p>
+          </div>
+          <div className="flex justify-between">
+            <p>
+              <strong>Doctor's Name:</strong> {appointment.doctor.firstName}{" "}
+              {appointment.doctor.lastName}
+            </p>
+          </div>
+          <div className="flex justify-between">
+            <p>
+              <strong>Doctor's Department:</strong> {appointment.department}
+            </p>
+          </div>
+          <div className="my-4"></div>
+          <h3 className="text-xl font-bold text-red-500">Patient Details</h3>
+          <div className="space-y-2">
+            <p className="text-lg">
+              <strong>Name:</strong> {appointment.firstName}{" "}
+              {appointment.lastName}
+            </p>
+            <div className="flex justify-between mr-9">
+              <p>
+                <strong>Patient ID:</strong> {appointment.patientId}
+              </p>
+              <p>
+                <strong>Email:</strong> {appointment.email}
+              </p>
+            </div>
+            <div className="flex justify-between pr-14 mr-10">
+              <p>
+                <strong>DOB:</strong> {appointment.dob.substring(0, 10)}
+              </p>
+              <p>
+                <strong>Phone:</strong> {appointment.phone}
+              </p>
+            </div>
+            <div className="flex justify-between pr-14 mr-24">
+              <p>
+                <strong>Aadhar No.:</strong> {appointment.nic}
+              </p>
+              <p>
+                <strong>Gender:</strong> {appointment.gender}
+              </p>
+            </div>
+            <p>
+              <strong>Address:</strong> {appointment.address}
+            </p>
+          </div>
+          <hr className="my-4" />
+          <div className="flex justify-between">
+            <p>
+              <strong>Doctor's Consultation Fee:</strong>
+            </p>
+            <p>₹{consultationFee}</p>
+          </div>
+          {extraCharges.map((c, i) => (
+            <div key={i} className="flex justify-between">
+              <p>
+                <strong>{c.purpose}:</strong>
+              </p>
+              <p>₹{Number(c.cost).toFixed(2)}</p>
+            </div>
+          ))}
+          <div className="flex justify-between">
+            <p>
+              <strong>GST (18%):</strong>
+            </p>
+            <p>₹{gst.toFixed(2)}</p>
+          </div>
+          <hr className="my-2" />
+          <div className="flex justify-between">
+            <p className="font-bold">
+              <strong>Total Amount:</strong>
+            </p>
+            <p className="font-bold">₹{total.toFixed(2)}</p>
+          </div>
+          <hr className="my-4" />
+          <div className="text-center">
+            <p className="font-bold text-xl mb-4">Wishing you a healthy life</p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+      <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-3xl max-h-screen overflow-y-auto relative border-4 border-gray-800">
+        <button
+          className="absolute top-4 right-4 text-2xl font-bold text-gray-600"
+          onClick={closePopup}
+        >
+          ×
+        </button>
+        <button
+          className="absolute top-4 left-4 text-xl font-bold text-blue-600"
+          onClick={downloadBill}
+        >
+          Download Bill (PDF)
+        </button>
+
+        {/* Send Bill / Edit Bill buttons — only shown before bill is sent */}
+        <div className="absolute top-14 left-4 flex flex-col gap-1">
+          {billSent ? (
+            <span className="text-sm font-bold text-gray-400 cursor-not-allowed">
+              Bill Sent ✓
+            </span>
+          ) : (
+            <>
+              <button
+                className="text-sm font-bold text-green-600 hover:text-green-800 text-left"
+                onClick={sendBill}
+              >
+                Send Bill
+              </button>
+              <button
+                className="text-sm font-bold text-orange-500 hover:text-orange-700 text-left"
+                onClick={openEdit}
+              >
+                ✏️ Edit Charges
+              </button>
+            </>
+          )}
+        </div>
+
+        {renderBillContent()}
       </div>
 
       {/* ── Edit Charges Popup ─────────────────────────────────────────── */}
@@ -530,7 +922,6 @@ const GenerateBill = ({ closePopup, appointment }) => {
               charges below.
             </p>
 
-            {/* Fixed doctor fee row (read-only) */}
             <div className="flex items-center gap-3 mb-3 bg-gray-50 rounded-lg px-3 py-2">
               <input
                 className="flex-1 border-none bg-transparent text-sm font-medium text-gray-500 outline-none"
@@ -550,7 +941,6 @@ const GenerateBill = ({ closePopup, appointment }) => {
               <span className="w-6"></span>
             </div>
 
-            {/* Editable rows */}
             <div className="flex flex-col gap-2 max-h-56 overflow-y-auto">
               {editRows.map((row, i) => (
                 <div
@@ -585,7 +975,6 @@ const GenerateBill = ({ closePopup, appointment }) => {
               ))}
             </div>
 
-            {/* Add row */}
             <button
               onClick={addEditRow}
               className="mt-3 w-full border-2 border-dashed border-orange-300 text-orange-500 hover:border-orange-500 hover:text-orange-700 rounded-lg py-2 text-sm font-semibold transition"
@@ -593,7 +982,6 @@ const GenerateBill = ({ closePopup, appointment }) => {
               + Add Item
             </button>
 
-            {/* Live total preview */}
             <div className="mt-4 bg-gray-800 text-white rounded-lg px-4 py-3 flex justify-between items-center text-sm font-semibold">
               <span>GST (18%)</span>
               <span>

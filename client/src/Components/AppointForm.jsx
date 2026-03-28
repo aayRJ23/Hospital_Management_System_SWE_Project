@@ -57,7 +57,7 @@ const AppointForm = ({ data, onClose }) => {
         {
           withCredentials: true,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
       toast.success(response.data.message);
       clearFields();
@@ -162,9 +162,12 @@ const AppointForm = ({ data, onClose }) => {
                 <label className="text-blue-800 mb-2 flex items-center">
                   <MdCake className="mr-2" /> Dob
                 </label>
+                {/* FIX: Changed type from "text" to "date" so the value is sent
+                    in YYYY-MM-DD format, which MongoDB can correctly cast to Date.
+                    Previously "24/07/2002" (DD/MM/YYYY) caused a cast error. */}
                 <input
                   className="w-full h-12 bg-zinc-100 rounded-lg px-4 border border-gray-300 transform transition-all duration-300 focus:ring-2 focus:ring-blue-500"
-                  type="text"
+                  type="date"
                   placeholder="Dob"
                   value={dob}
                   onChange={(e) => setDob(e.target.value)}
